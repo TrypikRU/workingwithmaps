@@ -5,8 +5,8 @@ function Assert($condition, [string]$message) {
     if (-not $condition) { throw $message }
     $script:checks++
 }
-function Request([string]$path, [string]$method = 'GET', $body = $null, [int]$expected = 200) {
-    $options = @{ Uri = "$BaseUrl$path"; Method = $method; SkipHttpErrorCheck = $true; TimeoutSec = 10 }
+function Request([string]$path, [string]$method = 'GET', $body = $null, [int]$expected = 200, [hashtable]$headers = @{}) {
+    $options = @{ Uri = "$BaseUrl$path"; Method = $method; SkipHttpErrorCheck = $true; TimeoutSec = 10; Headers = $headers }
     if ($null -ne $body) { $options.Body = ConvertTo-Json $body -Depth 10; $options.ContentType = 'application/json' }
     $response = Invoke-WebRequest @options
     Assert ($response.StatusCode -eq $expected) "$method $path expected $expected, got $($response.StatusCode): $($response.Content)"
@@ -32,11 +32,30 @@ Assert ($created.serverVersion -eq 1 -and $repeated.updatedAt -eq $created.updat
 $visit.status = 'failed'
 $null = Request '/visits' 'POST' $visit 409
 $visit.serverVersion = 1
-$updated = Request '/visits' 'POST' $visit
-Assert ($updated.serverVersion -eq 2) 'Update must increment version'
+$conflicted = Request '/visits' 'POST' $visit 409
+Assert ($conflicted.current.serverVersion -eq 1 -and $conflicted.current.status -eq 'completed') 'Visit must remain immutable even with matching version'
 $visit.status = 'completed'
-$null = Request '/visits' 'POST' $visit 409
+$null = Request '/visits' 'POST' $visit
 
+# Acknowledged and conflicting PATCH, replay after another client's change,
+# and rejecting reuse of an idempotency key with a different payload.
+$current = (@(Request '/objects') | Where-Object id -eq $objects[0].id)
+$patch = @{ id = $current.id; name = 'Smoke object'; address = $current.address;
+    latitude = $current.latitude; longitude = $current.longitude; status = $current.status;
+    priority = $current.priority; serverVersion = $current.serverVersion }
+$path = '/objects/' + $current.id
+$firstKey = @{ 'Idempotency-Key' = "patch-$suffix" }
+$first = Request $path 'PATCH' $patch 200 $firstKey
+Assert ($first.serverVersion -eq $current.serverVersion + 1) 'PATCH increments serverVersion'
+$conflict = Request $path 'PATCH' $patch 409 @{ 'Idempotency-Key' = "stale-$suffix" }
+Assert ($conflict.current.serverVersion -eq $first.serverVersion) '409 returns current snapshot'
+$next = $patch.Clone(); $next.serverVersion = $first.serverVersion; $next.name = 'Other device'
+$second = Request $path 'PATCH' $next 200 @{ 'Idempotency-Key' = "next-$suffix" }
+$replay = Request $path 'PATCH' $patch 200 $firstKey
+Assert ($replay.serverVersion -eq $first.serverVersion -and $replay.name -eq $first.name) 'Replay must return original receipt'
+$unchanged = (@(Request '/objects') | Where-Object id -eq $current.id)
+Assert ($unchanged.serverVersion -eq $second.serverVersion -and $unchanged.name -eq $second.name) 'Replay must not overwrite newer state'
+$null = Request $path 'PATCH' $next 409 $firstKey
 $point = @{ id = "smoke-point-$suffix"; routeId = $routes[0].id; latitude = 55.75; longitude = 37.64; accuracy = 5; speed = $null; timestamp = [DateTimeOffset]::UtcNow.ToString('o') }
 $batch = Request '/location/batch' 'POST' @{ points = @($point) }
 $retry = Request '/location/batch' 'POST' @{ points = @($point) }
@@ -71,3 +90,4 @@ $schema = Request '/swagger/v1/swagger.json'
 Assert ($null -ne $schema.paths.'/location/batch') 'Swagger endpoint missing'
 Assert ($schema.components.schemas.VisitStatus.type -eq 'string') 'Swagger must describe string enums'
 Write-Output "PASS: $checks checks. Persistent visit: $($created.id); cursor: $($afterTimeout.cursor)"
+

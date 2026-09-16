@@ -12,6 +12,8 @@ import 'location_status_panel.dart';
 import '../../tracking/presentation/tracking_controller.dart';
 import '../../../core/geometry/circular_geofence.dart';
 import 'geofence_providers.dart';
+import 'offline_map_controller.dart';
+import 'offline_map_dialog.dart';
 
 class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
@@ -21,6 +23,7 @@ class MapScreen extends ConsumerWidget {
     final objects = ref.watch(objectsProvider);
     final focus = ref.watch(mapFocusProvider);
     final location = ref.watch(locationControllerProvider);
+    final offline = ref.watch(offlineMapControllerProvider);
     final route = ref.watch(currentRouteProvider).asData?.value;
     final zones = ref.watch(objectGeofencesProvider);
     final nearby = objects.asData?.value
@@ -29,12 +32,28 @@ class MapScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Карта'),
-        actions: const [ObjectsRefreshButton()],
+        actions: [
+          IconButton(
+            tooltip: 'Offline-карта',
+            icon: const Icon(Icons.download_for_offline_outlined),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => const OfflineMapDialog(),
+            ),
+          ),
+          const ObjectsRefreshButton(),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
             const LocationStatusPanel(),
+            if (offline.hasPack || offline.offlineOnly)
+              Text(
+                offline.offlineOnly
+                    ? 'Только offline · Покровка · zoom 13–16'
+                    : 'Offline-регион сохранён · вне покрытия используется сеть',
+              ),
             if (nearby != null)
               Padding(
                 padding: const EdgeInsets.all(8),
@@ -56,9 +75,10 @@ class MapScreen extends ConsumerWidget {
                     if (items.isEmpty) const Text('Нет объектов на карте'),
                     Expanded(
                       child: ObjectsMap(
-                        // Новая команда фокуса создаёт камеру на нужной позиции даже
-                        // при повторном показе того же объекта из другой вкладки.
-                        key: ValueKey(focus.revision),
+                        focusRevision: focus.revision,
+                        tileRevision: offline.revision,
+                        offlineTilesAvailable: offline.hasPack,
+                        tileAttribution: offline.attribution,
                         objects: items,
                         focusObjectId: focus.objectId,
                         location: location,

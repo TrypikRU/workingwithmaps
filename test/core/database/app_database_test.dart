@@ -15,7 +15,7 @@ import '../../support/test_database.dart';
 
 void main() {
   test(
-    'all seven tables exist; seed creates objects but no pending operations',
+    'all eight tables exist; seed creates objects but no pending operations',
     () async {
       final database = createTestDatabase();
       addTearDown(database.close);
@@ -31,6 +31,7 @@ void main() {
         'visits',
         'location_points',
         'sync_queue',
+        'sync_conflicts',
         'app_metadata',
       });
       expect(

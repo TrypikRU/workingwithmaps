@@ -6,8 +6,9 @@
 
 `GeolocatorLocationService` — единственное место импорта geolocator. Он переводит
 Position, LocationPermission и исключения плагина в собственные типы приложения.
-Будущий Kotlin foreground tracking адаптер реализует тот же контракт и подключится
-через `locationServiceProvider`. UI и LocationController менять не потребуется.
+UI-контракт позволяет заменить источник через `locationServiceProvider`.
+Существующий Kotlin tracking использует отдельный NativeTracking канал и durable
+inbox: он не заменяет GeolocatorLocationService карты и Check-in.
 
 `LocationController` (Riverpod Notifier) управляет loading, permissionGranted,
 permissionDenied, permissionDeniedForever, serviceDisabled, available, error,

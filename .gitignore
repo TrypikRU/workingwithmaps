@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/audit-flutter-test.log
 
 # Symbolication related
 app.*.symbols
@@ -50,3 +51,7 @@ app.*.map.json
 /backend/**/bin/
 /backend/**/obj/
 /backend/**/Data/*.sqlite*
+
+# Locally prepared offline tile packs
+/tools/offline_maps/output/
+/tools/offline_maps/__pycache__/

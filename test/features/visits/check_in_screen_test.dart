@@ -13,6 +13,62 @@ import '../../support/fake_location_service.dart';
 import '../../support/test_database.dart';
 
 void main() {
+  for (final access in [LocationAccess.denied, LocationAccess.deniedForever]) {
+    testWidgets(
+      'Object details remain readable; Check-in blocked for $access',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final db = createTestDatabase(seedDemoData: false);
+        addTearDown(db.close);
+        const object = TechnicalObject(
+          id: 'target',
+          name: 'Насосная',
+          address: 'Улица, 1',
+          latitude: 55,
+          longitude: 37,
+          priority: ObjectPriority.critical,
+        );
+        await DriftObjectsDataSource(
+          db,
+        ).mergeRemoteObjects([(object: object, updatedAt: DateTime.utc(2026))]);
+        final location = FakeLocationService()
+          ..access = access
+          ..requestedAccess = access;
+        addTearDown(location.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              locationServiceProvider.overrideWithValue(location),
+            ],
+            child: const LocationLifecycle(
+              child: MaterialApp(home: ObjectDetailsScreen(objectId: 'target')),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Насосная'), findsOneWidget);
+        expect(find.text('Улица, 1'), findsOneWidget);
+        expect(find.text('55.000000, 37.000000'), findsOneWidget);
+        expect(find.text('Нет текущей позиции'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Check-in'),
+              )
+              .onPressed,
+          isNull,
+        );
+        expect(await db.select(db.visits).get(), isEmpty);
+        expect(await db.select(db.syncQueue).get(), isEmpty);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      },
+    );
+  }
   testWidgets(
     'Live distance and accuracy gate the button; check-in updates status offline',
     (tester) async {

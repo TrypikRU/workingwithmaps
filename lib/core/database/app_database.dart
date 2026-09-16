@@ -12,6 +12,7 @@ import '../../features/visits/domain/visit_status.dart';
 import '../../features/tracking/data/tables/location_points.dart';
 import '../sync/sync_status.dart';
 import 'tables/sync_queue.dart';
+import 'tables/sync_conflicts.dart';
 import 'tables/app_metadata.dart';
 import 'app_database.steps.dart';
 import '../geometry/geo_point.dart';
@@ -28,6 +29,7 @@ part 'app_database.g.dart';
     Visits,
     LocationPoints,
     SyncQueue,
+    SyncConflicts,
     AppMetadata,
   ],
 )
@@ -64,11 +66,25 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: stepByStep(
+      from5To6: (m, schema) => transaction(() async {
+        await m.addColumn(schema.objects, schema.objects.serverVersion);
+        await m.createTable(schema.syncConflicts);
+        // Старые 409 уже блокируют очередь. Переносим их в диагностику, чтобы
+        // пользователь мог загрузить current и разрешить их после обновления.
+        await customStatement('''
+          INSERT INTO sync_conflicts
+            (queue_id, entity_type, entity_id, request_payload, local_payload, created_at)
+          SELECT id, entity_type, entity_id, COALESCE(payload, '{}'),
+            COALESCE(payload, '{}'), created_at FROM sync_queue
+          WHERE sync_status = 'failed' AND CASE WHEN json_valid(last_error)
+            THEN json_extract(last_error, '\$.kind') = 'conflict' ELSE 0 END
+        ''');
+      }),
       from4To5: (m, schema) => transaction(() async {
         await m.addColumn(schema.objects, schema.objects.polygon);
         await m.addColumn(schema.objects, schema.objects.geofenceRadius);

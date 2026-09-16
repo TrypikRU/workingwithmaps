@@ -1,251 +1,398 @@
-# Field Inspector / Field Route
+# Field Inspector
 
-Android-only Flutter pet-проект для выездных сотрудников. Сохранены package name
-`workingwithmaps` и Android applicationId `com.klochkov.workingwithmaps`.
+[![CI](https://github.com/TrypikRU/workingwithmaps/actions/workflows/ci.yml/badge.svg)](https://github.com/TrypikRU/workingwithmaps/actions/workflows/ci.yml)
 
-## Что работает
+Android-приложение на Flutter для выездного сотрудника: найти технический объект,
+начать обход, подтвердить посещение по GPS и сохранить пройденный маршрут.
+Объекты, визиты и очередь изменений доступны без интернета; отправка на сервер
+выполняется отдельно от работы пользователя.
 
-- Карта flutter_map / OpenStreetMap, маркеры статусов, детали объекта и список.
-- SQLite — основной источник объектов для карты, списка и деталей.
-- Пять демонстрационных объектов добавляются только при пустой таблице objects.
-- Foreground-геолокация, accuracy, круг точности, кнопка «Моя позиция», permissions.
-- Центрирование выбранного объекта и возврат к общему региону объектов.
-- Транзакционное сохранение объекта вместе с операцией в локальной sync_queue.
+Pet-проект исследует практические задачи мобильной разработки: локальные
+транзакции, потерю сети и подтверждений, конфликты версий, Android lifecycle и
+сохранение GPS без Flutter UI. Минимальный ASP.NET Core backend служит тестовым стендом.
 
-Начало/завершение обхода, нативный Android foreground location service, статистика и Polyline
-работают офлайн. Активный обход восстанавливается из SQLite после перезапуска.
-Сервис сохраняет GPS и при свёрнутом Flutter / выключенном экране в пределах ограничений Android.
-Автоматическое построение маршрута пока не реализовано. Объекты читаются без интернета;
-для загрузки новых тайлов нужна сеть. Офлайн-тайлы не реализованы.
+## Features
 
-## Архитектура данных
+| Возможность | Реализация |
+| --- | --- |
+| **OpenStreetMap** | `flutter_map`: объекты со статусами и приоритетами, полигоны, GPS, polyline, camera bounds и возврат камеры к объектам/маршруту |
+| **GPS** | Текущая и последняя известная позиция, accuracy, поток обновлений, permission denied/deniedForever, выключенная геолокация и ошибки |
+| **Check-in** | Расстояние по собственному Haversine; радиус 50 м и accuracy ≤ 50 м; визит, очередь и статус visited сохраняются атомарно |
+| **Offline-first / Drift** | SQLite — источник состояния экранов; reactive streams, начальный seed, схема v6 и проверяемые миграции |
+| **SyncEngine** | Последовательная очередь, retry/backoff, идемпотентность, recovery, конфликты и диагностика |
+| **Foreground tracking** | Kotlin location Foreground Service, постоянное уведомление, независимая запись GPS в native SQLite inbox |
+| **WorkManager** | Отложенная отправка очереди при подключённой сети через тот же SyncEngine |
+| **Geofence** | CircularGeofence: inside / approaching / outside; по умолчанию 50 / 150 м, информационное сообщение о приближении |
+| **Point in Polygon** | Собственный Ray Casting: простые локальные полигоны, граница считается внутри; полигоны хранятся локально и отображаются на карте |
+| **GPS filtering** | Отбрасывание неточных fixes, слишком малого движения, неверного времени и нереалистичной расчётной скорости |
+| **Route tracking** | Начать/завершить обход, длительность, число точек, расстояние, посещённые объекты, восстановление активного обхода |
+| **Marker clustering** | Собственная сеточная группировка Web Mercator O(n), кэширование слоёв; тест на 500 локальных объектах |
+| **Offline maps** | Загрузка небольшого подготовленного raster-пакета, сохранённые тайлы и online fallback вне покрытия |
 
-### Check-in
+Автоматического Check-in и построения оптимального маршрута обхода нет.
+Круговая зона и Point in Polygon — отдельные геометрические инструменты;
+полигоны не подменяют проверку радиуса Check-in.
 
-Экран объекта показывает расстояние по Haversine, GPS accuracy и допустимую зону.
-По умолчанию CheckInPolicy разрешает Check-in при расстоянии ≤ 50 м и accuracy
-от 0 до 50 м включительно. Политика в domain не зависит от Flutter/Geolocator;
-радиус и допустимую accuracy можно настроить через checkInPolicyProvider.
-Последняя известная позиция, отсутствие permission или выключенная геолокация
-не разрешают Check-in. Перед записью controller повторно запрашивает текущую
-позицию через общий location layer. При плохой точности нужно дождаться нового fix.
+## Architecture
 
-VisitsRepository повторяет проверку зоны по координатам объекта из SQLite и одной
-транзакцией создаёт visit (status=completed, syncStatus=pending), операцию
-`entityType=visit, operation=upsert` в sync_queue и меняет объект на visited.
-Любой сбой откатывает все три записи. ID визита создаётся локально и сохранится
-для будущих повторов отправки. UI видит visited через Drift stream сразу после commit.
-HTTP при Check-in не вызывается. Ручная загрузка объектов не перезаписывает объекты
-с несинхронизированными визитами. Отправку визитов и подтверждение serverVersion
-выполняет SyncEngine. Повторный явный Check-in создаёт новый визит;
-параллельные нажатия во время сохранения блокируются controller.
-
-Ключевые файлы: `core/geometry/distance.dart`,
-`features/visits/domain/check_in_policy.dart`, `features/visits/data/visits_repository.dart`,
-`features/visits/presentation/check_in_controller.dart`.
-Тесты покрывают геометрию, пороги, запись/rollback, защиту visited от remote refresh
-и обновление экрана после Check-in без сети.
+Feature-first структура. Основной путь чтения и локальных изменений:
 
 ```text
-MapScreen / ObjectsScreen / ObjectDetailsScreen
-                      ↓
-        objectsProvider / objectProvider(id)
-                      ↓
-               ObjectsRepository
-                      ↓
-            DriftObjectsDataSource
-                      ↓
-        AppDatabase → field_inspector.sqlite
+UI → Riverpod → Repository → Drift / Local DB
 ```
 
-UI не импортирует Drift и получает доменные TechnicalObject через Riverpod.
-Repositories не экспортируют строки таблиц или companions. Один AppDatabase
-живёт в ProviderScope, открывается лениво и закрывается при освобождении scope.
-Файл БД остаётся в постоянном каталоге документов приложения через drift_flutter.
+Путь исходящей синхронизации:
 
-`watchObjects()` использует SQL watch(): карта, список и детали получают
-изменения из общей БД после commit. Прежний MockObjectsDataSource удалён.
-`demo_objects.dart` используется исключительно для начального заполнения SQLite.
-Проверка пустоты, seed и запись metadata выполняются одной транзакцией в beforeOpen.
-Непустая таблица не дополняется и не перезаписывается seed-данными. Если таблицу
-полностью очистить, при следующем открытии приложения она будет заполнена снова.
-Seed не создаёт операции синхронизации.
+```text
+SyncEngine → Sync Queue → REST API
+```
 
-`ObjectsRepository.saveObject()` обновляет объект с updatedAt и добавляет
-`entityType=object`, `operation=upsert` в sync_queue одной транзакцией.
-Ошибка любой записи откатывает обе. В этом пути нет HTTP. SyncEngine сохраняет
-payload и operationId перед первой отправкой. API пока не принимает изменения
-самих объектов, поэтому такие операции остаются failed/unsupported. Отправка
-визитов и точек реализована. Кнопки редактирования объектов не добавлялись.
+Очередь хранится в Drift, а HTTP выполняет SyncProcessor. Ответ сервера сначала
+фиксируется в SQLite; экраны получают обновление через stream локальной БД.
 
-TechnicalObject сохраняет существующий UI-контракт. updatedAt пока является
-метаданными хранения и не требуется экрану. SyncStatus — общий enum в core/sync:
-`synced`, `pending`, `syncing`, `failed`.
+```mermaid
+flowchart TB
+    subgraph Mobile[Flutter application]
+        UI[UI] --> RP[Riverpod providers / controllers]
+        RP --> Repo[Repository]
+        Repo --> DB[(Drift / Local DB)]
+        DB -. reactive streams .-> RP
+        Trigger[App lifecycle / manual sync] --> Engine[SyncEngine]
+        Worker[WorkManager headless worker] --> Engine
+        Engine --> Queue[Sync Queue in Drift]
+        Queue -->|claim and send via SyncProcessor| API[REST API]
+        API -->|ACK or error| Engine
+        Engine -->|transactional result| DB
+    end
+    subgraph Native[Android native tracking]
+        Bridge[Flutter NativeTracking adapter] <-->|MethodChannel| Service[Kotlin Foreground Service]
+        Service --> Location[Android Location APIs / FusedLocationProviderClient]
+        Location -->|callback via GpsFilter| Inbox[(Native SQLite inbox)]
+        Inbox -->|readPoints via channel| Importer[NativeTrackImporter]
+        Importer -->|commit first| Repo
+        Importer -. ACK after commit .-> Inbox
+    end
+    RP --> Bridge
+    API --> Server[(EF Core / server SQLite)]
+```
 
-## Схема SQLite v3
-
-| Таблица | Назначение и основные поля |
-| --- | --- |
-| objects | id, name, address, latitude, longitude, status, priority, updatedAt |
-| routes | id, name, status, createdAt, updatedAt, syncStatus, serverVersion |
-| route_objects | routeId, objectId, position; составной PK и уникальная позиция внутри обхода |
-| visits | id, objectId, nullable routeId, status, latitude, longitude, accuracy, createdAt, updatedAt, syncStatus, serverVersion |
-| location_points | id, routeId, latitude, longitude, accuracy, nullable speed, timestamp, syncStatus |
-| sync_queue | локальный auto-increment id, entityType, entityId, operation, createdAt, attemptCount, lastError, nextRetryAt, operationId, payload, syncStatus |
-| app_metadata | key, value, updatedAt |
-
-Все id сущностей — TEXT и могут назначаться клиентом; id очереди — локальный INTEGER.
-`serverVersion` допускает NULL до получения серверной версии. Время хранится
-стандартным DateTime Drift (Unix seconds), запись приложения использует UTC.
-Отсутствующая скорость — NULL, а не искусственный ноль.
-
-ObjectStatus, ObjectPriority, RouteStatus, VisitStatus и SyncStatus хранятся
-строковыми именами через встроенный Drift `textEnum` / EnumNameConverter.
-Порядок enum можно менять, переименование сохранённых значений требует миграции.
-RouteStatus: planned / active / completed; VisitStatus: completed / failed.
-
-Включён PRAGMA foreign_keys. Связи не удаляют каскадно визиты и точки маршрута.
-CHECK ограничивает отрицательные accuracy, position и attemptCount. Добавлены
-индексы visits(objectId, createdAt), location_points(routeId, timestamp),
-sync_queue(nextRetryAt, createdAt).
-
-## Миграции
-
-v2 → v3 транзакционно добавляет поля durable sync claim, сохраняя очередь.
-Снимки v1/v2/v3 и тесты переходов хранятся в репозитории.
-
-Сохранён снимок v1. Переход v1 → v2 создаёт objects, переносит все id, имена
-и координаты из technical_objects и добавляет новые таблицы и индексы.
-У перенесённых объектов address пустой, status planned, priority normal;
-updatedAt устанавливается при миграции. Перенос выполняется транзакционно.
-После него непустая objects не заменяется демонстрационными объектами.
-
-Переход использует неизменяемую Schema2 из app_database.steps.dart, поэтому
-изменения будущей текущей схемы не должны повлиять на старую миграцию.
-При следующем изменении таблиц:
-
-1. Увеличить schemaVersion.
-2. Выполнить `dart run build_runner build` и `dart run drift_dev make-migrations`.
-3. Дописать новый переход в MigrationStrategy, сохранив старые шаги.
-4. Проверить schema validation и сохранность данных в migration tests.
-
-Снимки drift_schemas и сгенерированные schema/steps файлы хранятся в репозитории.
-Их не редактируют вручную. Удаление БД вместо миграции недопустимо для локальных
-несинхронизированных данных.
-
-## Структура
+Ветвь платформы соответствует `Flutter ↔ MethodChannel ↔ Kotlin Foreground Service
+→ Android Location APIs`. Управление сервисом и перенос точек не требуют связи
+с Widget lifecycle. При отсутствии Flutter сервис пишет в собственный inbox.
 
 ```text
 lib/
-  app/                    # MaterialApp.router, навигация, тема
+  app/                       # MaterialApp.router, go_router, тема
   core/
-    database/             # AppDatabase, миграции, seed, служебные таблицы
-    network/              # Dio и ошибки remote-загрузки
-    location/             # LocationService, адаптер geolocator, Riverpod, lifecycle
-    permissions/
-    sync/                 # SyncEngine, processor, backoff, foreground lifecycle
-    utils/
-    widgets/
+    database/                # Drift, служебные таблицы, миграции
+    geometry/                # Haversine, geofence, Ray Casting
+    location/                # LocationService, geolocator, native channel
+    network/                 # Dio и mapping сетевых ошибок
+    sync/                    # engine, processor, retry, lease, conflicts, worker
+    permissions/ utils/ widgets/
   features/
-    map/{data,domain,presentation}/
-    objects/{data,domain,presentation}/
-    route/{data,domain,presentation}/
-    visits/{data,domain,presentation}/
-    tracking/{data,domain,presentation}/
-    sync/presentation/
+    map/ objects/ route/ visits/ tracking/ sync/
+      data/ domain/ presentation/  # слои по потребности feature
+android/app/src/main/kotlin/  # Android service, native storage, GPS filter
+backend/                     # ASP.NET Core API и HTTP smoke-тесты
+test/                        # unit, SQLite integration, widget и HTTP tests
 ```
 
-Таблицы предметных сущностей находятся в data соответствующих features.
-Служебные sync_queue и app_metadata — в core/database/tables.
-Геолокация карты и Check-in работает через LocationService. Запись обхода выполняет
-Kotlin LocationTrackingService с независимым SQLite inbox; NativeTrackImporter переносит
-точки в Drift через RouteRepository. UI не зависит от наличия platform channel events.
-[Описание геолокации](lib/core/location/README.md).
+UI работает с доменными сущностями и состоянием Riverpod. SQL, Dio DTO и типы
+`Geolocator.Position` остаются за границами экранов. Providers собирают зависимости;
+GetIt/BLoC и дополнительный DI-контейнер не используются.
 
-## Запуск и проверки
+## Offline-first
 
-Окружение: Flutter 3.44.5 stable / Dart 3.12.2, Android SDK.
+**Local DB = source of truth.** Экран не переключается между «ответом API» и
+«локальным cache»: карта, список и детали всегда читают один repository stream.
+
+Например, Check-in выполняет одну транзакцию:
+
+```text
+BEGIN
+  INSERT visit (syncStatus = pending)
+  INSERT sync_queue operation
+  UPDATE object SET status = visited
+COMMIT
+```
+
+После commit UI сразу показывает посещение. Если вставка очереди не удалась,
+откатывается и визит: нет сохранённой бизнес-операции без задания на синхронизацию.
+Сеть на этом пути не вызывается. После повторного открытия приложения SQLite
+содержит тот же визит, статус объекта и очередь.
+
+Ручное обновление объектов идёт в обратном направлении:
+`API → DTO/mapper → Repository → Drift transaction → stream → UI`.
+Несинхронизированные изменения защищены от перезаписи, известная `serverVersion`
+не откатывается более старым ответом. При offline/timeout/500 показывается SnackBar,
+а локальные данные остаются на экране. При первом запуске пустая БД получает пять
+demo-объектов; открытие приложения не требует доступного backend.
+
+Бизнес-БД содержит `objects`, `routes`, `route_objects`, `visits`, `location_points`,
+`sync_queue`, `sync_conflicts`, `app_metadata`. Снимки схем v1–v6 и migration tests
+хранятся в репозитории. Несинхронизированная БД не удаляется ради обновления схемы.
+
+## SyncEngine
+
+Движок не зависит от UI и используется foreground lifecycle, экраном диагностики
+и WorkManager. Запуск в открытом приложении происходит при старте/resume и по
+таймеру; ручные действия доступны на вкладке «Синхронизация».
+
+| Механизм | Поведение |
+| --- | --- |
+| **Queue** | Операции обрабатываются последовательно. Retry/conflict блокирует следующие операции своей сущности, но не другие сущности |
+| **Durable claim** | Перед HTTP транзакционно сохраняются operationId, неизменяемый payload и syncing; HTTP выполняется вне SQLite-транзакции |
+| **Success** | Проверенный ACK обновляет syncStatus/serverVersion и удаляет queue item одной транзакцией |
+| **Retry** | Ошибка увеличивает attemptCount; lastError и nextRetryAt сохраняются на диск. Network, timeout и 5xx повторяются автоматически |
+| **Exponential backoff** | 5, 10, 20, 40… секунд, максимум 15 минут на операцию. 4xx отделены от retryable ошибок; 409 требует решения конфликта |
+| **Idempotency** | Клиент создаёт стабильный ID. Повтор сохраняет тот же payload/key; backend дедуплицирует immutable события по ID и payload, PATCH — по durable receipt |
+| **Recovery** | Прерванные syncing возвращаются в pending с прежними ключом и payload; failed сохраняют backoff после restart |
+| **Concurrency** | Single-flight в isolate плюс SQLite lease между UI и headless worker; проверка владельца защищает от запоздалого ACK старого worker |
+
+Это **at-least-once доставка с идемпотентным применением**, а не обещание одного
+HTTP-запроса: потеря ответа после серверного commit приводит к безопасному повтору.
+
+**Конфликты.** PATCH с локальной версией 4 против серверной 5 получает 409.
+В `sync_conflicts` сохраняются запрос, локальные и серверные поля. Диалог позволяет
+явно принять серверную версию объекта или повторить последние локальные поля на
+новой базе. Visit — факт события: автоматически затирать его на сервере нельзя.
+История решений сохраняется; кнопка retry не обходит конфликт.
+
+**Queue coalescing.** Повторные изменения объекта до первой отправки объединяются
+в непрерывном неотправленном хвосте. Уже claimed A сохраняет payload, а новая B
+ожидает своей очереди. ACK A обновляет версию, не затирая поля B. Для визитов и
+GPS-точек coalescing не применяется.
+
+[Подробности SyncEngine](lib/core/sync/README.md) ·
+[Конфликты и сценарий A → B](lib/core/sync/CONFLICTS.md)
+
+## Background processing
+
+| | Foreground Service | WorkManager |
+| --- | --- | --- |
+| Задача | Продолжительный сбор GPS | Отложенная отправка pending/retry операций |
+| Реализация | Kotlin, FusedLocationProviderClient | Headless Flutter worker, общий SyncEngine |
+| Хранение | Независимый native SQLite inbox | Уже созданная Drift sync_queue |
+| Запуск | Пользователь начинает обход из видимого приложения | Unique periodic work, connected network, battery not low |
+| UI | Постоянное уведомление со счётчиком точек | Widget/Activity не требуются |
+
+Native service не зависит от FlutterEngine. Импортёр читает точки через MethodChannel,
+коммитит их вместе с sync_queue в Drift и только затем подтверждает native ACK.
+Стабильные ID делают повторный импорт после сбоя безопасным.
+
+**Граница MVP:** WorkManager не импортирует native inbox и не занимается GPS.
+Накопленные при отсутствии Flutter точки начинают отправляться после импорта при
+возвращении в приложение. Сбор координат при этом продолжает работать отдельно.
+
+Период WorkManager — 15 минут, но это не точное расписание. Foreground Service
+также не обещает непрерывность после force-stop, перезагрузки или вмешательства
+производителя устройства. Для location FGS объявлены тип и permissions; запуск
+происходит из видимой Activity. Требования платформы описаны в
+[Android documentation](https://developer.android.com/develop/background-work/services/fgs/service-types#location).
+
+[Native tracking и ADB](lib/features/tracking/README.md) ·
+[Worker, retry и reboot](lib/core/sync/BACKGROUND_SYNC.md)
+
+## GPS filtering
+
+`LocationPointFilter` — самостоятельный Dart domain service. Kotlin `GpsFilter`
+применяет эквивалентные правила до записи native inbox.
+
+| Проверка | Решение |
+| --- | --- |
+| Accuracy > 50 м | Отбросить точку |
+| Расстояние до предыдущей принятой точки < 5 м | Отбросить GPS-шум/малое перемещение |
+| Haversine distance / elapsed time > 15 м/с | Отбросить нереалистичный скачок для текущего профиля обхода |
+| Невалидные координаты, accuracy/speed или неположительный интервал времени | Отбросить точку |
+
+GPS-reported speed хранится, но не считается доказательством правдоподобного движения.
+Фильтр сравнивает с последней **принятой** точкой: выброс не смещает baseline.
+Разрывы записи хранятся сегментами, чтобы polyline не соединяла неизвестные промежутки.
+Пороги — параметры MVP, а не универсальная модель для транспорта любого типа.
+
+## Offline maps
+
+**Offline business data и offline map tiles — разные механизмы.** Отсутствие
+подложки карты не лишает пользователя объектов, визитов и маршрута в Drift.
+
+Для MVP выбран регион Покровка / Чистые пруды в Москве: 39 PNG-тайлов, zoom 13–16.
+Python-утилита конвертирует разрешённый raster MBTiles в небольшой JSON/PNG-пакет.
+Приложение скачивает готовый пакет с собственного сервера, проверяет полноту,
+формат и лимиты, затем устанавливает его в отдельный каталог.
+
+Сохранённый тайл используется первым; при отсутствии тайла допускается online OSM
+fallback. В режиме «Только offline-тайлы» сетевых запросов нет. Вне покрытия без
+сети подложка может быть пустой. Пакет ограничен 12 MiB JSON / 8 MiB PNG и не
+включён в репозиторий: требуется источник с правом offline-использования.
+
+Массовое скачивание публичных OSM tiles не реализовано и запрещено
+[политикой tile.openstreetmap.org](https://operations.osmfoundation.org/policies/tiles/).
+[Подготовка пакета, локальный сервер и проверка](docs/OFFLINE_MAPS.md).
+
+## Tech stack
+
+| Область | Технологии |
+| --- | --- |
+| Mobile | Flutter 3.44.5 / Dart 3.12.2, Android-only |
+| State / navigation | Riverpod, go_router |
+| Storage / models | Drift 2.34.0, SQLite, Freezed, json_serializable, build_runner |
+| Network / maps | Dio, flutter_map, OpenStreetMap, latlong2 |
+| Location / background | geolocator, workmanager, Kotlin, MethodChannel, FusedLocationProviderClient |
+| Backend | ASP.NET Core Web API, .NET 10, EF Core SQLite, Swagger |
+| Quality | flutter_test, Kotlin JUnit, HTTP smoke tests, Python unittest, GitHub Actions |
+
+Clustering и геометрические алгоритмы реализованы в проекте без дополнительного
+geometry/clustering пакета. Версии зависимостей зафиксированы в lock-файлах.
+
+## Screenshots
+
+Места для реальных скриншотов подготовлены; изображения ещё не добавлены.
+
+| Map | Object | Current Route | Sync |
+| --- | --- | --- | --- |
+| Карта, кластеры, GPS и трек | Расстояние, accuracy, Check-in | Длительность, точки и визиты | Очередь, retry и конфликт |
+| `map.png` | `object.png` | `current-route.png` | `sync.png` |
+
+[Каталог и инструкция съёмки](docs/screenshots/README.md).
+
+## How to run
+
+Потребуются Flutter 3.44.5 stable, Android SDK, JDK 17, .NET 10 SDK; для native GPS —
+Android device/emulator с Google Play Services / Google APIs. Для smoke-скрипта нужен
+PowerShell 7.5+; Python 3 нужен только для подготовки/проверки offline-пакета.
+
+### Flutter
 
 ```sh
+git clone https://github.com/TrypikRU/workingwithmaps.git
+cd workingwithmaps
 flutter pub get
 dart run build_runner build
-dart format lib test
-flutter analyze
-flutter test
-flutter run -d <android-device-id>
+flutter devices
+flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://10.0.2.2:5080/
 ```
 
-В pubspec.lock зафиксированы зависимости. drift и drift_dev закреплены на 2.34.0
-для совместимости инструментов миграций. Freezed/JSON/Drift настроены в build.yaml.
-Dio используется для ручного обновления объектов с backend.
+`API_BASE_URL` по умолчанию уже указывает на emulator host. Без backend доступны
+локальный seed, Check-in и обход. Для серверного обновления нажмите refresh на
+карте или в списке объектов. Package name: `workingwithmaps`;
+Android applicationId: `com.klochkov.workingwithmaps`.
 
-## Тестовый backend
+### ASP.NET Core backend
 
-В `backend/FieldInspector.Api` находится отдельный минимальный ASP.NET Core API
-с SQLite / EF Core, Swagger и искусственными ошибками синхронизации.
-[Запуск, контракты и проверки API](backend/README.md).
-На ПК: `http://127.0.0.1:5080/swagger`, в Android Emulator: `http://10.0.2.2:5080`.
-Debug-сборка Android разрешает HTTP для `10.0.2.2`.
-SyncEngine отправляет очередь при старте/resume и раз в 15 секунд в foreground.
-Дополнительно Android WorkManager запускает тот же SyncEngine без UI: periodic work
-с NetworkType.connected и достаточным зарядом, интервал от 15 минут. SQLite lease
-защищает очередь от одновременных запусков разных Flutter engines.
-[Архитектура worker, retry, reboot и команды проверки](lib/core/sync/BACKGROUND_SYNC.md).
-Экран «Синхронизация» показывает последнюю успешную синхронизацию, Synced/Pending/Syncing/Failed,
-все операции очереди и подробности ошибок. Есть ручной запуск, повтор ошибочных
-и индикатор автоматической/ручной синхронизации. Источником UI остаётся Drift.
-[Гарантии, идемпотентность, retry и ограничения SyncEngine](lib/core/sync/README.md).
+В другом терминале из корня репозитория:
 
-### Ручное обновление объектов
+```sh
+dotnet restore backend/FieldInspector.Api --locked-mode
+dotnet run --project backend/FieldInspector.Api --launch-profile http
+```
 
-Кнопка обновления в AppBar карты и списка запускает цепочку:
-`Dio → ObjectsRemoteDataSource → ObjectDto → ObjectsRepository → Drift → StreamProvider → UI`.
-API по умолчанию: `http://10.0.2.2:5080/` (Android Emulator).
-Другой адрес: `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5080/`.
-Запустите backend по инструкции выше и нажмите «Обновить объекты с сервера».
-Автоматической загрузки объектов при открытии нет; исходящая очередь обрабатывается автоматически.
+Swagger: [localhost:5080/swagger](http://127.0.0.1:5080/swagger).
+API создаёт отдельную серверную SQLite и seed. Профиль `http` включает Development
+и debug-сбои. Backend — локальный стенд без authentication и deployment.
 
-DTO и mapper находятся в `features/objects/data/object_dto.dart` и не заменяют
-доменную TechnicalObject. Весь ответ проверяется до записи, затем upsert выполняется
-одной транзакцией с серверным updatedAt. Загрузка не создаёт исходящих sync_queue
-операций и не удаляет отсутствующие в ответе объекты. Записи с локальными операциями
-в очереди сохраняются без изменений до будущего разрешения конфликтов SyncEngine.
+| Endpoint | Назначение |
+| --- | --- |
+| `GET /objects`, `GET /objects/{id}` | Объекты и серверный snapshot для конфликта |
+| `PATCH /objects/{id}` | Обновление с serverVersion и Idempotency-Key |
+| `GET /routes/today`, `POST /routes` | Тестовый список и регистрация локального обхода |
+| `POST /visits`, `GET /visits/{id}` | Идемпотентная запись визита и snapshot |
+| `POST /location/batch` | Приём GPS-точек |
+| `GET /sync?since=<timestamp>` | Серверные изменения; автоматический pull в приложении пока не подключён |
 
-ObjectsRefreshController хранит только состояние обновления; список и карта
-продолжают читать один локальный stream. При отсутствии сети, timeout или HTTP 500
-SnackBar сообщает об ошибке, а сохранённые объекты остаются доступны. Ошибка
-конфигурации API также не блокирует чтение SQLite. Повторите обновление вручную
-после восстановления связи. Проверки repository используют настоящий Drift в памяти
-и подменяют только Dio transport: сеть/500/cache, upsert, rollback, защита локальных
-правок и независимость refresh от состояния objectsProvider.
+Для проверки ошибок используйте query `?debug=500`, `?debug=409`,
+`?debug=timeout`, `?debug=delay&delayMs=2000` или заголовок `X-Debug-Fault`.
+[Контракты и примеры запросов](backend/README.md).
 
-Тесты проверяют:
+### Физический Android по USB
 
-- создание семи таблиц, seed только пустой БД, связи и строковое хранение enum;
-- реактивный repository и атомарность «объект + очередь», включая rollback;
-- сохранение изменений и очереди после закрытия/открытия файловой SQLite;
-- точную схему v5 после миграции и сохранность данных v1/v2/v3/v4;
-- карту и детали через настоящую SQLite в памяти, location state и lifecycle.
+```sh
+adb reverse tcp:5080 tcp:5080
+flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://127.0.0.1:5080/
+```
 
-Widget-тесты используют тайлы из памяти и fake LocationService. Файловый тест
-создаёт отдельную временную БД. Реальный Android GPS требует проверки на устройстве.
-Тайлы OSM используют HTTPS, идентификатор приложения и видимую атрибуцию:
-[OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/).
+В debug-сборке HTTP разрешён для `10.0.2.2`, `127.0.0.1`, `localhost`.
+Для начала обхода выдайте точную геолокацию; уведомления позволяют видеть счётчик
+нативного сервиса. Инструкции offline-пакета и GPS-эмуляции доступны по ссылкам выше.
 
-## Запись обхода
+## Testing
 
-На вкладке «Текущий обход» нажмите «Начать обход», разрешите точную геолокацию и уведомления.
-Валидные точки сохраняются без сети; Check-in связывает визит с активным обходом.
-Экран показывает длительность, число точек, расстояние, GPS accuracy, посещённые
-объекты и состояние записи. «Завершить обход» останавливает запись и фиксирует итог.
-На карте отображается трек текущего либо последнего завершённого обхода.
+```sh
+flutter analyze
+flutter test
+flutter build apk --debug
+```
 
-[Фильтр, lifecycle, восстановление и ограничения](lib/features/tracking/README.md).
+Unit-тесты покрывают Haversine, Point in Polygon, geofence, GPS filter, Check-in,
+repositories, RetryPolicy, SyncEngine, конфликты и coalescing. Проверки Drift
+используют реальные memory/file SQLite: commit/rollback, миграции, restart,
+reactive streams и конкурирующие подключения. Widget-тесты проверяют детали,
+Check-in allowed/denied, синхронизацию и сетевую ошибку при доступном cache.
+Тайлы и GPS подменяются; тесты не скачивают публичную OSM-карту.
 
-## Геометрия объектов
+Сквозной offline-тест проходит цепочку:
+`offline start → local objects → Check-in → visit + queue → close SQLite → reopen
+→ данные сохранены → network restored → sync → synced`.
 
-В `core/geometry` реализованы CircularGeofence (inside/approaching/outside) и
-собственный Ray Casting Point in Polygon. Haversine сохранён. Контур и радиус объекта
-хранятся в Drift v5, polygon отображается на карте. В зоне approaching появляется
-подсказка «Вы находитесь рядом с объектом». Автоматический Check-in не выполняется.
-[Правила границы, формат хранения и ограничения](lib/core/geometry/README.md).
+Для настоящего HTTP запустите backend на **отдельной тестовой БД**:
+
+```sh
+dotnet run --project backend/FieldInspector.Api --launch-profile http -- --Storage:Path ../.tmp/integration.sqlite
+# В другом терминале:
+flutter test --dart-define=SYNC_TEST_URL=http://127.0.0.1:5080/
+pwsh -NoProfile -File backend/scripts/Smoke-Test.ps1 -BaseUrl http://127.0.0.1:5080
+dotnet build backend/FieldInspector.Api --configuration Release
+```
+
+Smoke-тесты изменяют тестовые данные и проверяют API, idempotency, конфликты,
+искусственные 500/409/timeout/delay. Это реальный backend test suite; отдельного
+xUnit-проекта нет. Дополнительные локальные проверки:
+
+```sh
+python -m unittest discover -s tools/offline_maps -v
+# Из android/; на Windows используйте .\gradlew.bat:
+./gradlew :app:testDebugUnitTest
+```
+
+В обычном Flutter-запуске 149 тестов и 3 opt-in HTTP-сценария; с `SYNC_TEST_URL`
+все 152 сценария выполняются. Результаты финального прогона и границы аудита:
+[Final review](docs/FINAL_REVIEW.md), [карта покрытия](docs/AUDIT.md).
+
+### CI
+
+[GitHub Actions](.github/workflows/ci.yml): все PR, push в `main`/`master`/`develop`
+и ручной запуск. Flutter job проверяет format, code generation, analyze, tests и
+debug APK. Backend job выполняет locked restore, Release build и HTTP smoke suite.
+Deployment отсутствует; opt-in Flutter HTTP-тесты запускаются локально отдельно.
+
+## Architecture decisions
+
+1. **Локальное состояние едино.** UI не зависит от доступности API; DTO отделён от
+   domain entity, чтение и ручной refresh имеют разные состояния.
+2. **Transactional outbox.** Бизнес-изменение и очередь не могут сохраниться частично.
+3. **Durable claim и idempotency.** Замороженный payload делает timeout/restart
+   воспроизводимым, а серверные receipts защищают от повторного применения PATCH.
+4. **Явное разрешение конфликтов.** serverVersion — подтверждённая версия, Visit —
+   неизменяемый факт; автоматического last-write-wins нет.
+5. **Один engine для UI и worker.** SQLite lease и fencing защищают общую очередь
+   между Flutter engines; сетевой вызов не держит SQL-транзакцию.
+6. **Native inbox вместо прямой записи Kotlin в Drift.** Сервис переживает отсутствие
+   UI и не зависит от Dart-generated схемы; перенос подтверждается только после commit.
+7. **Geometry вне UI.** Haversine, Ray Casting и GPS filter тестируются независимо;
+   native-фильтр имеет собственные проверки эквивалентных правил.
+8. **Бизнес-данные и тайлы разделены.** Замена/ошибка offline-пакета не затрагивает
+   визиты; обновление GPS не требует пересоздавать все объектные markers.
+
+### Scope and limitations
+
+Проект предназначен для демонстрации инженерных решений, а не для эксплуатации
+без дальнейшей работы. Нет автоматического pull через `GET /sync`, синхронизации
+завершения обхода, редактора объектов в UI и оптимизации маршрута. Polygon/radius
+пока локальные. Point in Polygon рассчитан на простые локальные кольца без holes;
+проверка на 500 объектов не является benchmark на реальном устройстве.
+
+Native inbox импортируется при доступном Flutter; история конфликтов и серверные
+receipts пока без политики очистки. Backend использует упрощённое развитие схемы
+EnsureCreated/additive upgrade. Force-stop/Doze/OEM, батарею и длительную GPS-запись
+нужно проверять на физических устройствах. Реальные screenshots и картографический
+пакет ещё предстоит добавить для законченной демонстрации.

@@ -20,6 +20,7 @@ abstract class TechnicalObject with _$TechnicalObject {
     required double longitude,
     @Default(ObjectStatus.planned) ObjectStatus status,
     @Default(ObjectPriority.normal) ObjectPriority priority,
+    int? serverVersion,
     @Default(50.0) double geofenceRadius,
     @Default(<GeoPoint>[]) List<GeoPoint> polygon,
   }) = _TechnicalObject;

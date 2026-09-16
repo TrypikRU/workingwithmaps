@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace FieldInspector.Api.Data;
 
@@ -11,6 +12,20 @@ public static class SeedData
         // База Flutter никогда не открывается этим процессом.
         await db.Database.EnsureCreatedAsync();
         await using var transaction = await db.Database.BeginTransactionAsync();
+        // Маленькая additive migration для уже существующих pet-баз. EnsureCreated
+        // не обновляет таблицы. Проверка схемы и ALTER выполняются без удаления данных.
+        var connection = db.Database.GetDbConnection();
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction.GetDbTransaction();
+            command.CommandText = "PRAGMA table_info(Objects)";
+            var hasVersion = false;
+            await using (var reader = await command.ExecuteReaderAsync())
+                while (await reader.ReadAsync()) hasVersion |= reader.GetString(1) == "ServerVersion";
+            if (!hasVersion)
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE Objects ADD COLUMN ServerVersion INTEGER NOT NULL DEFAULT 1");
+        }
+        await db.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS OperationReceipts (Key TEXT NOT NULL PRIMARY KEY, RequestJson TEXT NOT NULL, ResponseJson TEXT NOT NULL)");
         var timestamp = DateTimeOffset.UtcNow.UtcTicks / 10 * 10;
         if (!await db.Objects.AnyAsync())
         {
@@ -44,3 +59,4 @@ public static class SeedData
                 Status = status, Priority = priority, UpdatedAtTicks = timestamp };
     }
 }
+

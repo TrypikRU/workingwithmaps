@@ -9,6 +9,7 @@ class TechnicalObjects extends Table {
   String get tableName => 'objects';
 
   TextColumn get id => text()();
+  IntColumn get serverVersion => integer().nullable()();
   TextColumn get name => text()();
   TextColumn get address => text().withDefault(const Constant(''))();
   RealColumn get latitude => real()();

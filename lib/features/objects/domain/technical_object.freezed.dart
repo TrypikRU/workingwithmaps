@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TechnicalObject {
 
- String get id; String get name; String get address; double get latitude; double get longitude; ObjectStatus get status; ObjectPriority get priority; double get geofenceRadius; List<GeoPoint> get polygon;
+ String get id; String get name; String get address; double get latitude; double get longitude; ObjectStatus get status; ObjectPriority get priority; int? get serverVersion; double get geofenceRadius; List<GeoPoint> get polygon;
 /// Create a copy of TechnicalObject
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $TechnicalObjectCopyWith<TechnicalObject> get copyWith => _$TechnicalObjectCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TechnicalObject&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.status, status) || other.status == status)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&const DeepCollectionEquality().equals(other.polygon, polygon));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TechnicalObject&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.status, status) || other.status == status)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.serverVersion, serverVersion) || other.serverVersion == serverVersion)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&const DeepCollectionEquality().equals(other.polygon, polygon));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,address,latitude,longitude,status,priority,geofenceRadius,const DeepCollectionEquality().hash(polygon));
+int get hashCode => Object.hash(runtimeType,id,name,address,latitude,longitude,status,priority,serverVersion,geofenceRadius,const DeepCollectionEquality().hash(polygon));
 
 @override
 String toString() {
-  return 'TechnicalObject(id: $id, name: $name, address: $address, latitude: $latitude, longitude: $longitude, status: $status, priority: $priority, geofenceRadius: $geofenceRadius, polygon: $polygon)';
+  return 'TechnicalObject(id: $id, name: $name, address: $address, latitude: $latitude, longitude: $longitude, status: $status, priority: $priority, serverVersion: $serverVersion, geofenceRadius: $geofenceRadius, polygon: $polygon)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $TechnicalObjectCopyWith<$Res>  {
   factory $TechnicalObjectCopyWith(TechnicalObject value, $Res Function(TechnicalObject) _then) = _$TechnicalObjectCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String address, double latitude, double longitude, ObjectStatus status, ObjectPriority priority, double geofenceRadius, List<GeoPoint> polygon
+ String id, String name, String address, double latitude, double longitude, ObjectStatus status, ObjectPriority priority, int? serverVersion, double geofenceRadius, List<GeoPoint> polygon
 });
 
 
@@ -65,7 +65,7 @@ class _$TechnicalObjectCopyWithImpl<$Res>
 
 /// Create a copy of TechnicalObject
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? latitude = null,Object? longitude = null,Object? status = null,Object? priority = null,Object? geofenceRadius = null,Object? polygon = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? latitude = null,Object? longitude = null,Object? status = null,Object? priority = null,Object? serverVersion = freezed,Object? geofenceRadius = null,Object? polygon = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -74,7 +74,8 @@ as String,latitude: null == latitude ? _self.latitude : latitude // ignore: cast
 as double,longitude: null == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
 as double,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ObjectStatus,priority: null == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
-as ObjectPriority,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as ObjectPriority,serverVersion: freezed == serverVersion ? _self.serverVersion : serverVersion // ignore: cast_nullable_to_non_nullable
+as int?,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
 as double,polygon: null == polygon ? _self.polygon : polygon // ignore: cast_nullable_to_non_nullable
 as List<GeoPoint>,
   ));
@@ -161,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String address,  double latitude,  double longitude,  ObjectStatus status,  ObjectPriority priority,  double geofenceRadius,  List<GeoPoint> polygon)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String address,  double latitude,  double longitude,  ObjectStatus status,  ObjectPriority priority,  int? serverVersion,  double geofenceRadius,  List<GeoPoint> polygon)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TechnicalObject() when $default != null:
-return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude,_that.status,_that.priority,_that.geofenceRadius,_that.polygon);case _:
+return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude,_that.status,_that.priority,_that.serverVersion,_that.geofenceRadius,_that.polygon);case _:
   return orElse();
 
 }
@@ -182,10 +183,10 @@ return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String address,  double latitude,  double longitude,  ObjectStatus status,  ObjectPriority priority,  double geofenceRadius,  List<GeoPoint> polygon)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String address,  double latitude,  double longitude,  ObjectStatus status,  ObjectPriority priority,  int? serverVersion,  double geofenceRadius,  List<GeoPoint> polygon)  $default,) {final _that = this;
 switch (_that) {
 case _TechnicalObject():
-return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude,_that.status,_that.priority,_that.geofenceRadius,_that.polygon);case _:
+return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude,_that.status,_that.priority,_that.serverVersion,_that.geofenceRadius,_that.polygon);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +203,10 @@ return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String address,  double latitude,  double longitude,  ObjectStatus status,  ObjectPriority priority,  double geofenceRadius,  List<GeoPoint> polygon)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String address,  double latitude,  double longitude,  ObjectStatus status,  ObjectPriority priority,  int? serverVersion,  double geofenceRadius,  List<GeoPoint> polygon)?  $default,) {final _that = this;
 switch (_that) {
 case _TechnicalObject() when $default != null:
-return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude,_that.status,_that.priority,_that.geofenceRadius,_that.polygon);case _:
+return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude,_that.status,_that.priority,_that.serverVersion,_that.geofenceRadius,_that.polygon);case _:
   return null;
 
 }
@@ -217,7 +218,7 @@ return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude
 @JsonSerializable()
 
 class _TechnicalObject implements TechnicalObject {
-  const _TechnicalObject({required this.id, required this.name, this.address = '', required this.latitude, required this.longitude, this.status = ObjectStatus.planned, this.priority = ObjectPriority.normal, this.geofenceRadius = 50.0, final  List<GeoPoint> polygon = const <GeoPoint>[]}): _polygon = polygon;
+  const _TechnicalObject({required this.id, required this.name, this.address = '', required this.latitude, required this.longitude, this.status = ObjectStatus.planned, this.priority = ObjectPriority.normal, this.serverVersion, this.geofenceRadius = 50.0, final  List<GeoPoint> polygon = const <GeoPoint>[]}): _polygon = polygon;
   factory _TechnicalObject.fromJson(Map<String, dynamic> json) => _$TechnicalObjectFromJson(json);
 
 @override final  String id;
@@ -227,6 +228,7 @@ class _TechnicalObject implements TechnicalObject {
 @override final  double longitude;
 @override@JsonKey() final  ObjectStatus status;
 @override@JsonKey() final  ObjectPriority priority;
+@override final  int? serverVersion;
 @override@JsonKey() final  double geofenceRadius;
  final  List<GeoPoint> _polygon;
 @override@JsonKey() List<GeoPoint> get polygon {
@@ -249,16 +251,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TechnicalObject&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.status, status) || other.status == status)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&const DeepCollectionEquality().equals(other._polygon, _polygon));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TechnicalObject&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.status, status) || other.status == status)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.serverVersion, serverVersion) || other.serverVersion == serverVersion)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&const DeepCollectionEquality().equals(other._polygon, _polygon));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,address,latitude,longitude,status,priority,geofenceRadius,const DeepCollectionEquality().hash(_polygon));
+int get hashCode => Object.hash(runtimeType,id,name,address,latitude,longitude,status,priority,serverVersion,geofenceRadius,const DeepCollectionEquality().hash(_polygon));
 
 @override
 String toString() {
-  return 'TechnicalObject(id: $id, name: $name, address: $address, latitude: $latitude, longitude: $longitude, status: $status, priority: $priority, geofenceRadius: $geofenceRadius, polygon: $polygon)';
+  return 'TechnicalObject(id: $id, name: $name, address: $address, latitude: $latitude, longitude: $longitude, status: $status, priority: $priority, serverVersion: $serverVersion, geofenceRadius: $geofenceRadius, polygon: $polygon)';
 }
 
 
@@ -269,7 +271,7 @@ abstract mixin class _$TechnicalObjectCopyWith<$Res> implements $TechnicalObject
   factory _$TechnicalObjectCopyWith(_TechnicalObject value, $Res Function(_TechnicalObject) _then) = __$TechnicalObjectCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String address, double latitude, double longitude, ObjectStatus status, ObjectPriority priority, double geofenceRadius, List<GeoPoint> polygon
+ String id, String name, String address, double latitude, double longitude, ObjectStatus status, ObjectPriority priority, int? serverVersion, double geofenceRadius, List<GeoPoint> polygon
 });
 
 
@@ -286,7 +288,7 @@ class __$TechnicalObjectCopyWithImpl<$Res>
 
 /// Create a copy of TechnicalObject
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? address = null,Object? latitude = null,Object? longitude = null,Object? status = null,Object? priority = null,Object? geofenceRadius = null,Object? polygon = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? address = null,Object? latitude = null,Object? longitude = null,Object? status = null,Object? priority = null,Object? serverVersion = freezed,Object? geofenceRadius = null,Object? polygon = null,}) {
   return _then(_TechnicalObject(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -295,7 +297,8 @@ as String,latitude: null == latitude ? _self.latitude : latitude // ignore: cast
 as double,longitude: null == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
 as double,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ObjectStatus,priority: null == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
-as ObjectPriority,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as ObjectPriority,serverVersion: freezed == serverVersion ? _self.serverVersion : serverVersion // ignore: cast_nullable_to_non_nullable
+as int?,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
 as double,polygon: null == polygon ? _self._polygon : polygon // ignore: cast_nullable_to_non_nullable
 as List<GeoPoint>,
   ));

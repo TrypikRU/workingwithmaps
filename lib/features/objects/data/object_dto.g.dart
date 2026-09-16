@@ -20,6 +20,10 @@ ObjectDto _$ObjectDtoFromJson(Map<String, dynamic> json) =>
           'updatedAt',
           (v) => DateTime.parse(v as String),
         ),
+        serverVersion: $checkedConvert(
+          'serverVersion',
+          (v) => (v as num?)?.toInt(),
+        ),
       );
       return val;
     });
@@ -33,4 +37,5 @@ Map<String, dynamic> _$ObjectDtoToJson(ObjectDto instance) => <String, dynamic>{
   'status': instance.status,
   'priority': instance.priority,
   'updatedAt': instance.updatedAt.toIso8601String(),
+  'serverVersion': instance.serverVersion,
 };

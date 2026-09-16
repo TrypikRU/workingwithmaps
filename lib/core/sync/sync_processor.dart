@@ -10,6 +10,7 @@ import 'retry_policy.dart';
 import 'sync_error.dart';
 import 'sync_status.dart';
 import 'sync_lease.dart';
+import 'sync_snapshot.dart';
 
 /// Обработка одной операции: durable claim → HTTP без SQL lock → atomic ACK.
 /// Ни DTO Drift, ни Dio не выходят в UI. Engine отвечает только за порядок запусков.
@@ -36,6 +37,13 @@ class SyncProcessor {
       database.syncQueue,
     )..where((q) => q.syncStatus.equalsValue(SyncStatus.failed))).get();
     for (final item in failed) {
+      // 409 требует решения человека. «Повторить ошибочные» не является
+      // согласием перезаписать запись, даже для legacy ошибок без snapshot.
+      try {
+        if (jsonDecode(item.lastError ?? '{}')['kind'] == 'conflict') continue;
+      } catch (_) {
+        /* Legacy lastError may be plain text. */
+      }
       await (database.update(
         database.syncQueue,
       )..where((q) => q.id.equals(item.id))).write(
@@ -85,8 +93,9 @@ class SyncProcessor {
     try {
       final claimed = await _claim(item);
       final payload = jsonDecode(claimed.payload!) as Map<String, dynamic>;
-      final response = await dio().post<dynamic>(
+      final response = await dio().request<dynamic>(
         switch (item.entityType) {
+          'object' => 'objects/${Uri.encodeComponent(item.entityId)}',
           'visit' => 'visits',
           'route' => 'routes',
           _ => 'location/batch',
@@ -100,7 +109,10 @@ class SyncProcessor {
         // Backend deduplicates by stable entity ID + identical payload. This key
         // also identifies one frozen operation in logs; it is NOT a substitute
         // for server-side deduplication and never changes on retries.
-        options: Options(headers: {'Idempotency-Key': claimed.operationId}),
+        options: Options(
+          method: item.entityType == 'object' ? 'PATCH' : 'POST',
+          headers: {'Idempotency-Key': claimed.operationId},
+        ),
       );
       final body = response.data;
       Map<String, dynamic>? ack;
@@ -118,7 +130,7 @@ class SyncProcessor {
       }
       if (ack == null ||
           ack['id'] != item.entityId ||
-          (item.entityType == 'visit' &&
+          (['visit', 'object'].contains(item.entityType) &&
               (ack['serverVersion'] is! int ||
                   (ack['serverVersion'] as int) < 1))) {
         throw const SyncException(
@@ -144,7 +156,13 @@ class SyncProcessor {
           : const SyncException(SyncErrorKind.local, 'Local processing failed');
       // Если сам SQLite недоступен, оставляем durable claim как syncing. При
       // следующем запуске recover повторит тот же запрос; остальные строки целы.
-      await _fail(item, failure);
+      await _fail(
+        item,
+        failure,
+        current: error is DioException && error.response?.data is Map
+            ? (error.response!.data as Map)['current']
+            : null,
+      );
       logger.log('sync.operation.failure', {
         'queueId': item.id,
         ...failure.toJson(),
@@ -157,7 +175,14 @@ class SyncProcessor {
   Future<SyncQueueData> _claim(SyncQueueData item) => database.transaction(
     () async {
       await verifyOwnership?.call();
-      if (!(item.entityType == 'route' && item.operation == 'create') &&
+      // A repository may coalesce B into the selected, still-unsent A between
+      // queued() and claim. Read again under the transaction before freezing.
+      item = await (database.select(
+        database.syncQueue,
+      )..where((q) => q.id.equals(item.id))).getSingle();
+      if (!(item.entityType == 'object' &&
+              ['upsert', 'update', 'patch'].contains(item.operation)) &&
+          !(item.entityType == 'route' && item.operation == 'create') &&
           !(item.operation == 'upsert' &&
               ['visit', 'location_point'].contains(item.entityType))) {
         throw const SyncException(
@@ -168,7 +193,11 @@ class SyncProcessor {
       String? payload = item.payload;
       if (payload == null) {
         Map<String, dynamic> data;
-        if (item.entityType == 'route') {
+        if (item.entityType == 'object') {
+          data = syncRequest(
+            await readSyncEntity(database, 'object', item.entityId),
+          );
+        } else if (item.entityType == 'route') {
           final route = await (database.select(
             database.routes,
           )..where((r) => r.id.equals(item.entityId))).getSingle();
@@ -280,7 +309,15 @@ class SyncProcessor {
             ))
             .get();
     final status = remaining.isEmpty ? SyncStatus.synced : SyncStatus.pending;
-    if (item.entityType == 'visit') {
+    if (item.entityType == 'object') {
+      await (database.update(
+        database.technicalObjects,
+      )..where((o) => o.id.equals(item.entityId))).write(
+        TechnicalObjectsCompanion(
+          serverVersion: Value(ack['serverVersion'] as int),
+        ),
+      );
+    } else if (item.entityType == 'visit') {
       // Не копируем remote бизнес-поля поверх более свежей локальной правки.
       // Следующая операция получит эту serverVersion при создании своего snapshot.
       await (database.update(
@@ -320,30 +357,65 @@ class SyncProcessor {
         );
   });
 
-  Future<void> _fail(SyncQueueData item, SyncException failure) =>
-      database.transaction(() async {
-        await verifyOwnership?.call();
-        final attempts = item.attemptCount + 1;
-        final retryAt = failure.retryable
-            ? clock().toUtc().add(retryPolicy.delay(attempts))
-            : null;
-        await (database.update(
-          database.syncQueue,
-        )..where((q) => q.id.equals(item.id))).write(
-          SyncQueueCompanion(
-            syncStatus: const Value(SyncStatus.failed),
-            attemptCount: Value(attempts),
-            lastError: Value(jsonEncode(failure.toJson())),
-            nextRetryAt: Value(retryAt),
-          ),
-        );
-        await _entityStatus(item, SyncStatus.failed);
-        logger.log('sync.retry.scheduled', {
-          'queueId': item.id,
-          'attemptCount': attempts,
-          'nextRetryAt': retryAt?.toIso8601String(),
-        });
+  Future<void> _fail(
+    SyncQueueData item,
+    SyncException failure, {
+    Object? current,
+  }) => database.transaction(() async {
+    await verifyOwnership?.call();
+    if (failure.kind == SyncErrorKind.conflict) {
+      final claimed = await (database.select(
+        database.syncQueue,
+      )..where((q) => q.id.equals(item.id))).getSingle();
+      final local = ['object', 'visit'].contains(item.entityType)
+          ? jsonEncode(
+              await readSyncEntity(database, item.entityType, item.entityId),
+            )
+          : claimed.payload ?? '{}';
+      final server = validatedServerSnapshot(
+        item.entityType,
+        item.entityId,
+        current,
+      );
+      await database
+          .into(database.syncConflicts)
+          .insert(
+            SyncConflictsCompanion.insert(
+              queueId: item.id,
+              entityType: item.entityType,
+              entityId: item.entityId,
+              requestPayload: claimed.payload ?? '{}',
+              localPayload: local,
+              serverPayload: Value(server == null ? null : jsonEncode(server)),
+              createdAt: clock().toUtc(),
+            ),
+          );
+      logger.log('sync.conflict.detected', {
+        'queueId': item.id,
+        'hasServerSnapshot': server != null,
       });
+    }
+    final attempts = item.attemptCount + 1;
+    final retryAt = failure.retryable
+        ? clock().toUtc().add(retryPolicy.delay(attempts))
+        : null;
+    await (database.update(
+      database.syncQueue,
+    )..where((q) => q.id.equals(item.id))).write(
+      SyncQueueCompanion(
+        syncStatus: const Value(SyncStatus.failed),
+        attemptCount: Value(attempts),
+        lastError: Value(jsonEncode(failure.toJson())),
+        nextRetryAt: Value(retryAt),
+      ),
+    );
+    await _entityStatus(item, SyncStatus.failed);
+    logger.log('sync.retry.scheduled', {
+      'queueId': item.id,
+      'attemptCount': attempts,
+      'nextRetryAt': retryAt?.toIso8601String(),
+    });
+  });
 
   Future<void> _entityStatus(SyncQueueData item, SyncStatus status) async {
     if (item.entityType == 'visit') {

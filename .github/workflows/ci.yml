@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new commit replaces an obsolete run for the same PR/branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Flutter / tests and Android APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      # Matches the Dart 3.12.2 constraint and the SDK used locally.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.5'
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Check Dart formatting
+        run: dart format --set-exit-if-changed .
+
+      # Rebuild generated models/serialization/SQL before analysis and tests.
+      # Historical drift_schemas snapshots are committed migration inputs.
+      - name: Generate Freezed, JSON and Drift code
+        run: dart run build_runner build
+
+      - name: Analyze Flutter
+        run: flutter analyze
+
+      - name: Test Flutter
+        run: flutter test
+
+      - name: Build debug APK
+        run: |
+          # Keep Gradle within the hosted runner's memory budget.
+          mkdir -p "$HOME/.gradle"
+          printf '%s\n' 'org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -XX:ReservedCodeCacheSize=256m' >> "$HOME/.gradle/gradle.properties"
+          flutter build apk --debug
+
+  backend:
+    name: ASP.NET Core / build and API tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: backend/FieldInspector.Api/packages.lock.json
+
+      - name: Restore locked backend dependencies
+        run: dotnet restore FieldInspector.Api --locked-mode
+
+      - name: Build backend
+        run: dotnet build FieldInspector.Api --configuration Release --no-restore
+
+      # The backend's test suite is an HTTP smoke script, not an empty dotnet
+      # test invocation against a Web SDK project. Each run gets a fresh SQLite.
+      - name: Test backend endpoints and sync failures
+        shell: bash
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          Storage__Path: ${{ runner.temp }}/field-inspector-ci.sqlite
+        run: |
+          set -euo pipefail
+          dotnet run --project FieldInspector.Api --configuration Release \
+            --no-build --no-launch-profile -- --urls http://127.0.0.1:5097 \
+            > "$RUNNER_TEMP/backend.log" 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid" 2>/dev/null || true' EXIT
+
+          ready=false
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:5097/objects > /dev/null; then
+              ready=true
+              break
+            fi
+            if ! kill -0 "$backend_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            cat "$RUNNER_TEMP/backend.log"
+            exit 1
+          fi
+
+          if ! pwsh -NoProfile -File scripts/Smoke-Test.ps1 -BaseUrl http://127.0.0.1:5097; then
+            cat "$RUNNER_TEMP/backend.log"
+            exit 1
+          fi

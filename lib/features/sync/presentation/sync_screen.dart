@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/sync/sync_status.dart';
 import '../domain/sync_diagnostics.dart';
 import 'sync_diagnostics_providers.dart';
+import 'sync_conflicts_panel.dart';
 
 class SyncScreen extends ConsumerWidget {
   const SyncScreen({super.key});
@@ -130,6 +131,7 @@ class SyncScreen extends ConsumerWidget {
                       'Обычный запуск учитывает nextRetryAt. Повтор ошибочных снимает задержку, но не разрешает конфликт автоматически. Ошибки сохраняются до успешного подтверждения.',
                     ),
                     const SizedBox(height: 24),
+                    const SyncConflictsPanel(),
                     Text(
                       'Queue operations',
                       style: Theme.of(context).textTheme.titleLarge,

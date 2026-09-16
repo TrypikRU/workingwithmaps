@@ -7,6 +7,7 @@ public enum VisitStatus { Completed, Failed }
 
 public sealed class TechnicalObject
 {
+    public long ServerVersion { get; set; } = 1;
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string Address { get; set; } = "";
@@ -26,6 +27,14 @@ public sealed class FieldRoute
     // Для read-only тестовых обходов достаточно упорядоченного JSON-массива ID.
     public string ObjectIdsJson { get; set; } = "[]";
     public long UpdatedAtTicks { get; set; }
+}
+
+// Успешный PATCH и его ответ коммитятся вместе для повтора после потери ACK.
+public sealed class OperationReceipt
+{
+    public string Key { get; set; } = "";
+    public string RequestJson { get; set; } = "";
+    public string ResponseJson { get; set; } = "";
 }
 
 public sealed class Visit

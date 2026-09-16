@@ -4,7 +4,10 @@ using FieldInspector.Api.Data;
 namespace FieldInspector.Api;
 
 public sealed record ObjectDto(string Id, string Name, string Address, double Latitude,
-    double Longitude, ObjectStatus Status, ObjectPriority Priority, DateTimeOffset UpdatedAt);
+    double Longitude, ObjectStatus Status, ObjectPriority Priority, DateTimeOffset UpdatedAt, long ServerVersion);
+// Полный набор редактируемых полей; geometry пока остаётся локальной.
+public sealed record ObjectPatchRequest(string Id, string Name, string Address, double Latitude,
+    double Longitude, ObjectStatus Status, ObjectPriority Priority, long? ServerVersion);
 public sealed record RouteDto(string Id, string Name, DateOnly Date, RouteStatus Status,
     string[] ObjectIds, DateTimeOffset UpdatedAt);
 public sealed record RegisterRouteRequest(string Id, string Name, DateOnly Date);
@@ -26,7 +29,7 @@ public static class Dto
 {
     public static DateTimeOffset Time(long ticks) => new(ticks, TimeSpan.Zero);
     public static ObjectDto ToDto(this TechnicalObject x) => new(x.Id, x.Name, x.Address,
-        x.Latitude, x.Longitude, x.Status, x.Priority, Time(x.UpdatedAtTicks));
+        x.Latitude, x.Longitude, x.Status, x.Priority, Time(x.UpdatedAtTicks), x.ServerVersion);
     public static RouteDto ToDto(this FieldRoute x) => new(x.Id, x.Name, x.Date, x.Status,
         JsonSerializer.Deserialize<string[]>(x.ObjectIdsJson)!, Time(x.UpdatedAtTicks));
     public static VisitDto ToDto(this Visit x) => new(x.Id, x.ObjectId, x.RouteId, x.Status,

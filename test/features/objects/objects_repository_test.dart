@@ -34,7 +34,7 @@ void main() {
       expect(operations, hasLength(1));
       expect(operations.single.entityId, object.id);
       expect(operations.single.entityType, 'object');
-      expect(operations.single.operation, 'upsert');
+      expect(operations.single.operation, 'patch');
       expect(operations.single.attemptCount, 0);
       expect(operations.single.nextRetryAt, isNull);
       final row = await database.select(database.technicalObjects).getSingle();
@@ -63,6 +63,10 @@ void main() {
       final subscription = repository.watchObjects().listen(emissions.add);
       addTearDown(subscription.cancel);
       await pumpEventQueue();
+      // A уже отправлялась: B обязана вставить отдельную операцию, а не coalesce.
+      await database.customStatement(
+        "UPDATE sync_queue SET payload='{}', operation_id='frozen'",
+      );
       // Имитируем сбой второй записи транзакции, не меняя production-код.
       await database.customStatement('''
       CREATE TEMP TRIGGER reject_queue BEFORE INSERT ON sync_queue

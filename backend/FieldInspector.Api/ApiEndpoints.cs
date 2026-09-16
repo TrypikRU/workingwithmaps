@@ -1,4 +1,6 @@
 using FieldInspector.Api.Data;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace FieldInspector.Api;
@@ -10,6 +12,12 @@ public static class ApiEndpoints
         app.MapGet("/objects", async (InspectorDbContext db, CancellationToken ct) =>
             (await db.Objects.AsNoTracking().OrderBy(x => x.Id).ToArrayAsync(ct)).Select(x => x.ToDto()))
             .WithSummary("All technical objects").Produces<ObjectDto[]>();
+        app.MapGet("/objects/{id}", async (string id, InspectorDbContext db, CancellationToken ct) =>
+            await db.Objects.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct) is { } entity
+                ? Results.Ok(entity.ToDto()) : Results.NotFound());
+        app.MapGet("/visits/{id}", async (string id, InspectorDbContext db, CancellationToken ct) =>
+            await db.Visits.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct) is { } entity
+                ? Results.Ok(entity.ToDto()) : Results.NotFound());
 
         app.MapGet("/routes/today", async (InspectorDbContext db, CancellationToken ct) =>
         {
@@ -18,7 +26,8 @@ public static class ApiEndpoints
                 .Select(x => x.ToDto());
         }).WithSummary("Today's routes (UTC date)").Produces<RouteDto[]>();
 
-        app.MapPost("/visits", SaveVisit).WithSummary("Create or update a visit; safe to retry the same payload")
+        app.MapPatch("/objects/{id}", PatchObject).WithSummary("Versioned object edit; Idempotency-Key required").Produces<ObjectDto>().ProducesProblem(409);
+        app.MapPost("/visits", SaveVisit).WithSummary("Create immutable visit; safe to retry the same payload")
             .Produces<VisitDto>(201).Produces<VisitDto>().ProducesProblem(400).ProducesProblem(409);
         app.MapPost("/routes", RegisterRoute).WithSummary("Idempotently register a locally created route")
             .Produces<RouteDto>(201).Produces<RouteDto>().ProducesProblem(400).ProducesProblem(409);
@@ -28,6 +37,59 @@ public static class ApiEndpoints
             .Produces<SyncResponse>().ProducesProblem(400);
     }
 
+    private static readonly JsonSerializerOptions SyncJson = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
+    private static async Task<IResult> PatchObject(string id, ObjectPatchRequest request,
+        HttpRequest http, InspectorDbContext db, SyncGate gate, CancellationToken ct)
+    {
+        var key = http.Headers["Idempotency-Key"].ToString();
+        if (!ValidId(key) || id != request.Id || !ValidId(id) || string.IsNullOrWhiteSpace(request.Name)
+            || request.Name.Length > 200 || request.Address is null
+            || !ValidCoordinates(request.Latitude, request.Longitude, 0)
+            || !Enum.IsDefined(request.Status) || !Enum.IsDefined(request.Priority) || request.ServerVersion is < 1)
+            return Invalid("Valid object fields and Idempotency-Key are required.");
+        await gate.Mutex.WaitAsync(ct);
+        try
+        {
+            var requestJson = JsonSerializer.Serialize(request, SyncJson);
+            var receipt = await db.OperationReceipts.AsNoTracking().SingleOrDefaultAsync(x => x.Key == key, ct);
+            if (receipt is not null)
+                return receipt.RequestJson == requestJson
+                    ? Results.Content(receipt.ResponseJson, "application/json")
+                    : Conflict("Idempotency-Key was already used for a different request.");
+            var entity = await db.Objects.SingleOrDefaultAsync(x => x.Id == id, ct);
+            if (entity is null) return Results.NotFound();
+            if (request.ServerVersion != entity.ServerVersion)
+                return Results.Problem(statusCode: 409, title: "Object version conflict",
+                    extensions: new Dictionary<string, object?> { ["current"] = entity.ToDto() });
+            entity.Name = request.Name;
+            entity.Address = request.Address;
+            entity.Latitude = request.Latitude;
+            entity.Longitude = request.Longitude;
+            entity.Status = request.Status;
+            entity.Priority = request.Priority;
+            entity.ServerVersion++;
+            entity.UpdatedAtTicks = gate.NextTimestamp();
+            var responseJson = JsonSerializer.Serialize(entity.ToDto(), SyncJson);
+            db.OperationReceipts.Add(new OperationReceipt { Key = key, RequestJson = requestJson, ResponseJson = responseJson });
+            // EF SaveChanges commits the versioned entity and durable receipt atomically.
+            // No receipt for 409: explicit resolution must create a NEW operation key.
+            try { await db.SaveChangesAsync(ct); }
+            catch (DbUpdateConcurrencyException)
+            {
+                db.ChangeTracker.Clear();
+                var current = await db.Objects.AsNoTracking().SingleAsync(x => x.Id == id, ct);
+                return Results.Problem(statusCode: 409, title: "Object version conflict",
+                    extensions: new Dictionary<string, object?> { ["current"] = current.ToDto() });
+            }
+            gate.Commit(entity.UpdatedAtTicks);
+            return Results.Content(responseJson, "application/json");
+        }
+        finally { gate.Mutex.Release(); }
+    }
     private static async Task<IResult> RegisterRoute(RegisterRouteRequest request, InspectorDbContext db, SyncGate gate, CancellationToken ct)
     {
         if (!ValidId(request.Id) || string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200 || request.Date == default)
@@ -65,8 +127,8 @@ public static class ApiEndpoints
             if (visit is not null && Same(visit, request)) return Results.Ok(visit.ToDto());
             if (visit is null && request.ServerVersion is not null)
                 return Conflict("Visit does not exist. Create with serverVersion=null.");
-            if (visit is not null && visit.ServerVersion != request.ServerVersion)
-                return Results.Problem(statusCode: 409, title: "Visit version conflict",
+            if (visit is not null)
+                return Results.Problem(statusCode: 409, title: "Immutable visit conflict",
                     extensions: new Dictionary<string, object?> { ["current"] = visit.ToDto() });
 
             var created = visit is null;
@@ -87,6 +149,7 @@ public static class ApiEndpoints
             {
                 var target = await db.Objects.SingleAsync(x => x.Id == request.ObjectId, ct);
                 target.Status = ObjectStatus.Visited;
+                target.ServerVersion++;
                 target.UpdatedAtTicks = visit.UpdatedAtTicks;
             }
             try { await db.SaveChangesAsync(ct); }
@@ -175,3 +238,4 @@ public static class ApiEndpoints
         && x.Latitude == y.Latitude && x.Longitude == y.Longitude && x.Accuracy == y.Accuracy
         && x.Speed == y.Speed && x.TimestampTicks == y.Timestamp.UtcTicks;
 }
+

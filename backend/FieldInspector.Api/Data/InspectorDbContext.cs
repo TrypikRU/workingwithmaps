@@ -7,11 +7,14 @@ public sealed class InspectorDbContext(DbContextOptions<InspectorDbContext> opti
     public DbSet<TechnicalObject> Objects => Set<TechnicalObject>();
     public DbSet<FieldRoute> Routes => Set<FieldRoute>();
     public DbSet<Visit> Visits => Set<Visit>();
+    public DbSet<OperationReceipt> OperationReceipts => Set<OperationReceipt>();
     public DbSet<LocationPoint> LocationPoints => Set<LocationPoint>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
         model.Entity<TechnicalObject>().ToTable("Objects");
+        model.Entity<TechnicalObject>().Property(x => x.ServerVersion).IsConcurrencyToken().HasDefaultValue(1L);
+        model.Entity<OperationReceipt>().ToTable("OperationReceipts").HasKey(x => x.Key);
         model.Entity<FieldRoute>().ToTable("Routes");
         model.Entity<Visit>().ToTable("Visits");
         model.Entity<LocationPoint>().ToTable("LocationPoints");

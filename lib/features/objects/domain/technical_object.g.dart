@@ -19,6 +19,7 @@ _TechnicalObject _$TechnicalObjectFromJson(Map<String, dynamic> json) =>
       priority:
           $enumDecodeNullable(_$ObjectPriorityEnumMap, json['priority']) ??
           ObjectPriority.normal,
+      serverVersion: (json['serverVersion'] as num?)?.toInt(),
       geofenceRadius: (json['geofenceRadius'] as num?)?.toDouble() ?? 50.0,
       polygon:
           (json['polygon'] as List<dynamic>?)
@@ -36,6 +37,7 @@ Map<String, dynamic> _$TechnicalObjectToJson(_TechnicalObject instance) =>
       'longitude': instance.longitude,
       'status': _$ObjectStatusEnumMap[instance.status]!,
       'priority': _$ObjectPriorityEnumMap[instance.priority]!,
+      'serverVersion': instance.serverVersion,
       'geofenceRadius': instance.geofenceRadius,
       'polygon': instance.polygon.map((e) => e.toJson()).toList(),
     };

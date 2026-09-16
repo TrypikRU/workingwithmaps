@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/sync/sync_status.dart';
+import '../../../core/sync/queue_coalescing.dart';
 import '../../../core/geometry/circular_geofence.dart';
 import '../../../core/geometry/geo_point.dart';
 import '../domain/technical_object.dart';
@@ -29,10 +30,22 @@ class DriftObjectsDataSource {
           .where((visit) => visit.syncStatus != SyncStatus.synced)
           .map((visit) => visit.objectId),
     );
+    final localVersions = {
+      for (final row
+          in await _database.select(_database.technicalObjects).get())
+        row.id: row.serverVersion,
+    };
     await _database.batch((batch) {
       for (final record in records) {
         final object = record.object;
         if (protectedIds.contains(object.id)) continue;
+        // GET может завершиться после ACK или более нового GET. Удалённая
+        // очередь уже не защищает объект, поэтому версия не должна убывать.
+        final version = localVersions[object.id];
+        if (version != null &&
+            (object.serverVersion == null || object.serverVersion! < version)) {
+          continue;
+        }
         batch.insertAllOnConflictUpdate(_database.technicalObjects, [
           TechnicalObjectsCompanion.insert(
             id: object.id,
@@ -42,6 +55,7 @@ class DriftObjectsDataSource {
             longitude: object.longitude,
             status: Value(object.status),
             priority: Value(object.priority),
+            serverVersion: Value(object.serverVersion),
             updatedAt: Value(record.updatedAt),
             // API has no geometry contract yet. Absent values preserve locally
             // stored polygon/radius during refresh (new rows receive defaults).
@@ -70,6 +84,7 @@ class DriftObjectsDataSource {
               longitude: row.longitude,
               status: row.status,
               priority: row.priority,
+              serverVersion: row.serverVersion,
               geofenceRadius: row.geofenceRadius,
               polygon: row.polygon,
             ),
@@ -86,6 +101,11 @@ class DriftObjectsDataSource {
       radius: object.geofenceRadius,
     );
     final now = DateTime.now().toUtc();
+    // UI может редактировать старый snapshot после ACK. Версию сервера берём
+    // из текущей БД, а не откатываем её значением из формы редактирования.
+    final existing = await (_database.select(
+      _database.technicalObjects,
+    )..where((o) => o.id.equals(object.id))).getSingleOrNull();
     await _database
         .into(_database.technicalObjects)
         .insertOnConflictUpdate(
@@ -97,6 +117,9 @@ class DriftObjectsDataSource {
             longitude: object.longitude,
             status: Value(object.status),
             priority: Value(object.priority),
+            serverVersion: Value(
+              existing?.serverVersion ?? object.serverVersion,
+            ),
             updatedAt: Value(now),
             geofenceRadius: Value(object.geofenceRadius),
             polygon: Value(object.polygon),
@@ -104,15 +127,6 @@ class DriftObjectsDataSource {
         );
     // Нет состояния «объект сохранён, но операция синхронизации потеряна».
     // Ошибка любой записи откатывает обе; HTTP в пути локальной записи отсутствует.
-    await _database
-        .into(_database.syncQueue)
-        .insert(
-          SyncQueueCompanion.insert(
-            entityType: 'object',
-            entityId: object.id,
-            operation: 'upsert',
-            createdAt: Value(now),
-          ),
-        );
+    await enqueueObjectUpdate(_database, object.id, now);
   });
 }

@@ -10,6 +10,7 @@ class SyncServer implements HttpClientAdapter {
   final records = <String, Map<String, dynamic>>{};
   final requests = <Map<String, dynamic>>[];
   final keys = <String>[];
+  final receipts = <String, Map<String, dynamic>>{};
   final responses = <int>[];
   DioExceptionType? failure;
   bool loseNextAck = false;
@@ -27,6 +28,19 @@ class SyncServer implements HttpClientAdapter {
     active++;
     if (active > maxActive) maxActive = active;
     try {
+      if (options.method == 'GET') {
+        if (failure != null) {
+          throw DioException(requestOptions: options, type: failure!);
+        }
+        final record = records[options.uri.pathSegments.last];
+        return record == null
+            ? jsonResponse({}, 404)
+            : jsonResponse({
+                ...record['business'] as Map<String, dynamic>,
+                'serverVersion': record['version'],
+                'updatedAt': DateTime.utc(2026).toIso8601String(),
+              }, 200);
+      }
       final data = jsonDecode(jsonEncode(options.data)) as Map<String, dynamic>;
       requests.add(data);
       keys.add(options.headers['Idempotency-Key'] as String);
@@ -36,6 +50,13 @@ class SyncServer implements HttpClientAdapter {
       }
       final status = responses.isEmpty ? 200 : responses.removeAt(0);
       if (status != 200) return jsonResponse({'title': 'debug'}, status);
+      final patch = options.method == 'PATCH';
+      final receipt = receipts[keys.last];
+      if (patch && receipt != null) {
+        return receipt['request'] == jsonEncode(data)
+            ? jsonResponse(receipt['ack']!, 200)
+            : jsonResponse({}, 409);
+      }
       final point = options.uri.path == '/location/batch';
       final payload = point
           ? (data['points'] as List).single as Map<String, dynamic>
@@ -44,7 +65,20 @@ class SyncServer implements HttpClientAdapter {
       final existing = records[id];
       final business = Map<String, dynamic>.of(payload)
         ..remove('serverVersion');
-      if (existing == null ||
+      Map<String, dynamic> current() => {
+        ...existing!['business'] as Map<String, dynamic>,
+        'serverVersion': existing['version'],
+        'updatedAt': DateTime.utc(2026).toIso8601String(),
+      };
+      if (patch && existing == null) return jsonResponse({}, 404);
+      if (existing != null &&
+          ((patch && payload['serverVersion'] != existing['version']) ||
+              (!patch &&
+                  jsonEncode(existing['business']) != jsonEncode(business)))) {
+        return jsonResponse({'current': current()}, 409);
+      }
+      if (patch ||
+          existing == null ||
           jsonEncode(existing['business']) != jsonEncode(business)) {
         if (existing != null &&
             (point || payload['serverVersion'] != existing['version'])) {
@@ -56,6 +90,10 @@ class SyncServer implements HttpClientAdapter {
           'version': (existing?['version'] as int? ?? 0) + 1,
         };
       }
+      final ack = {...payload, 'serverVersion': records[id]!['version']};
+      if (patch) {
+        receipts[keys.last] = {'request': jsonEncode(data), 'ack': ack};
+      }
       if (loseNextAck) {
         loseNextAck = false;
         throw DioException(
@@ -63,7 +101,6 @@ class SyncServer implements HttpClientAdapter {
           type: DioExceptionType.receiveTimeout,
         );
       }
-      final ack = {...payload, 'serverVersion': records[id]!['version']};
       return jsonResponse(
         point
             ? {

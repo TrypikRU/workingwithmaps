@@ -125,7 +125,7 @@ void main() {
     'Manual failed retry bypasses backoff but preserves payload/key and attempt history',
     () async {
       await enqueue(db, 'one');
-      server.responses.addAll([500, 409, 200]);
+      server.responses.addAll([500, 500, 200]);
       await engine().run();
       final original = await db.select(db.syncQueue).getSingle();
       expect(original.nextRetryAt!.isAfter(now), isTrue);
@@ -133,7 +133,7 @@ void main() {
       final failed = await db.select(db.syncQueue).getSingle();
       expect(failed.syncStatus, SyncStatus.failed);
       expect(failed.attemptCount, 2);
-      expect(failed.lastError, contains('conflict'));
+      expect(failed.lastError, contains('server'));
       expect(failed.payload, original.payload);
       expect(failed.operationId, original.operationId);
       expect((await SyncDiagnosticsRepository(db).watch().first).synced, 0);
@@ -271,7 +271,7 @@ void main() {
   });
 
   test(
-    'New local revision is not lost behind frozen retry and uses new serverVersion',
+    'Changed visit after frozen retry is retained as immutable event conflict',
     () async {
       await enqueue(db, 'one');
       server.loseNextAck = true;
@@ -293,12 +293,15 @@ void main() {
       await engine().run();
       expect(server.requests, hasLength(1)); // successor cannot overtake retry
       now = now.add(const Duration(seconds: 5));
-      expect((await engine().run()).succeeded, 2);
+      final result = await engine().run();
+      expect(result.succeeded, 1);
+      expect(result.failed, 1);
       expect(server.requests[1]['accuracy'], 8);
       expect(server.requests[2]['accuracy'], 9);
       expect(server.requests[2]['serverVersion'], 1);
       expect((await db.select(db.visits).getSingle()).accuracy, 9);
-      expect(server.applied, 2);
+      expect(server.applied, 1);
+      expect(await db.select(db.syncConflicts).get(), hasLength(1));
     },
   );
 
@@ -345,7 +348,7 @@ void main() {
             SyncQueueCompanion.insert(
               entityType: 'object',
               entityId: 'demo-1',
-              operation: 'upsert',
+              operation: 'delete',
             ),
           );
       await enqueue(db, 'one');

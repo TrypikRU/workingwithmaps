@@ -16,6 +16,7 @@ class ObjectDto {
     required this.status,
     required this.priority,
     required this.updatedAt,
+    this.serverVersion,
   });
 
   final String id;
@@ -26,6 +27,7 @@ class ObjectDto {
   final String status;
   final String priority;
   final DateTime updatedAt;
+  final int? serverVersion;
 
   factory ObjectDto.fromJson(Map<String, dynamic> json) =>
       _$ObjectDtoFromJson(json);
@@ -35,6 +37,7 @@ class ObjectDto {
 extension ObjectDtoMapper on ObjectDto {
   TechnicalObject toDomain() {
     if (id.trim().isEmpty ||
+        (serverVersion != null && serverVersion! < 1) ||
         !latitude.isFinite ||
         !longitude.isFinite ||
         latitude < -90 ||
@@ -51,6 +54,7 @@ extension ObjectDtoMapper on ObjectDto {
       longitude: longitude,
       status: ObjectStatus.values.byName(status),
       priority: ObjectPriority.values.byName(priority),
+      serverVersion: serverVersion,
     );
   }
 }
@@ -66,5 +70,6 @@ extension TechnicalObjectDtoMapper on TechnicalObject {
     status: status.name,
     priority: priority.name,
     updatedAt: updatedAt.toUtc(),
+    serverVersion: serverVersion,
   );
 }

@@ -52,6 +52,39 @@ class UiSyncEngine extends SyncEngine {
 }
 
 void main() {
+  testWidgets('Empty sync screen has no automatic HTTP or lost local state', (
+    tester,
+  ) async {
+    final db = createTestDatabase(seedDemoData: false);
+    addTearDown(db.close);
+    final sync = UiSyncEngine(db);
+    addTearDown(sync.activity.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          syncEngineProvider.overrideWithValue(sync),
+        ],
+        child: const MaterialApp(home: SyncScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final label in [
+      'Synced: 0',
+      'Pending: 0',
+      'Syncing: 0',
+      'Failed: 0',
+      'Пока не было',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(sync.calls, 0);
+    await tester.scrollUntilVisible(find.text('Очередь пуста'), 250);
+    expect(find.text('Очередь пуста'), findsOneWidget);
+    expect(find.text('Синхронизация выполняется…'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
   testWidgets(
     'Diagnostics shows details, requests retry and follows DB and engine streams',
     (tester) async {

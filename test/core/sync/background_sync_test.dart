@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:dio/dio.dart';
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:workingwithmaps/core/database/app_database.dart';
@@ -14,8 +15,21 @@ import 'package:workingwithmaps/core/sync/sync_status.dart';
 import 'package:workingwithmaps/core/utils/app_logger.dart';
 import '../../support/sync_server.dart';
 
-AppDatabase openFile(String path) =>
-    AppDatabase.forTesting(NativeDatabase(File(path)), seedDemoData: false);
+AppDatabase openFile(String path, {bool concurrent = false}) {
+  final previous = driftRuntimeOptions.dontWarnAboutMultipleDatabases;
+  try {
+    // These tests deliberately emulate separate UI/worker connections in one
+    // isolate. Each owns a NEW executor; no QueryExecutor is shared. Silence
+    // Drift's class-instance heuristic only while constructing that connection.
+    if (concurrent) driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    return AppDatabase.forTesting(
+      NativeDatabase(File(path)),
+      seedDemoData: false,
+    );
+  } finally {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = previous;
+  }
+}
 
 Future<bool> competingWorker(String path) => Isolate.run(() async {
   final db = openFile(path);
@@ -118,7 +132,7 @@ void main() {
 
   test('Expired owner cannot ACK, renew or release successors lease', () async {
     final first = openFile(path);
-    final second = openFile(path);
+    final second = openFile(path, concurrent: true);
     var now = DateTime.now();
     final old = SyncLease(first, clock: () => now);
     expect(await old.acquire(), isTrue);
@@ -138,7 +152,7 @@ void main() {
 
   test('External connection commit refreshes live UI Drift streams', () async {
     final ui = openFile(path);
-    final worker = openFile(path);
+    final worker = openFile(path, concurrent: true);
     await ui.refreshExternalChanges();
     final snapshots = <int>[];
     final subscription = ui
@@ -159,7 +173,7 @@ void main() {
     'Late server ACK from expired owner is fenced; successor retries same key',
     () async {
       final db = openFile(path);
-      final second = openFile(path);
+      final second = openFile(path, concurrent: true);
       var now = DateTime.now();
       final server = SyncServer()..hold = Completer<void>();
       final dio = Dio(BaseOptions(baseUrl: 'http://test/'))

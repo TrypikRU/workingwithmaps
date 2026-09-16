@@ -33,9 +33,7 @@ SQLite автоматически создаётся в `backend/FieldInspector.
 dotnet run --project backend/FieldInspector.Api --launch-profile http -- --Storage:Path ../.tmp/test.sqlite
 ```
 
-Для минимального стенда используется `EnsureCreated`, без EF migrations.
-После изменения схемы задайте новый путь к тестовой БД или сохраните её копию перед
-пересозданием. Это не затрагивает SQLite мобильного приложения.
+Для минимального стенда используется EnsureCreated и additive upgrade существующей БД: при запуске добавляются Objects.ServerVersion и OperationReceipts, данные не удаляются. SQLite мобильного приложения мигрирует отдельно через Drift v6.
 
 ## Android Emulator
 
@@ -47,10 +45,11 @@ dotnet run --project backend/FieldInspector.Api --launch-profile http -- --Stora
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5080/
 ```
 
-В debug Android Manifest подключено разрешение cleartext HTTP только для `10.0.2.2`.
+В debug Android Manifest разрешён cleartext HTTP для `10.0.2.2`, `127.0.0.1`
+и `localhost` (последние два — для `adb reverse` на физическом устройстве).
 Release-конфигурация не менялась. Кнопка обновления объектов вызывает GET /objects
 через Dio и repository, сохраняет ответ в Drift. UI обновляется через stream БД.
-SyncEngine отправляет очередь через POST /visits и POST /location/batch.
+SyncEngine отправляет очередь через PATCH /objects/{id}, POST /routes, POST /visits и POST /location/batch.
 Новый локальный обход сначала регистрируется через POST /routes.
 GET /sync и загрузка обходов пока автоматически не вызываются.
 Для физического телефона этот адрес не подходит.
@@ -64,7 +63,7 @@ JSON использует camelCase, enum — строки. Время пере�
 | `GET /objects` | Массив объектов: id, name, address, latitude, longitude, status, priority, updatedAt |
 | `GET /routes/today` | Массив обходов на день UTC: id, name, date, status, objectIds, updatedAt |
 | `POST /routes` | `{id, name, date: "2026-09-13"}`; 201 создание, 200 идентичный повтор, 409 тот же ID с другими данными |
-| `POST /visits` | 201 при создании, 200 при повторе/обновлении; актуальные updatedAt и serverVersion |
+| `POST /visits` | 201 при создании, 200 при идентичном повторе; другой payload → 409; актуальные updatedAt и serverVersion |
 | `POST /location/batch` | `{inserted, existing, accepted}`; от 1 до 500 точек, атомарно |
 | `GET /sync?since=<timestamp>` | `{cursor, serverTime, objects, routes, visits, locationPoints}` |
 
@@ -100,8 +99,7 @@ priority: `low` / `normal` / `high` / `critical`. Route status: `planned` / `act
 POST визита со status=completed атомарно меняет статус объекта на visited.
 
 Клиент назначает стабильные ID до отправки. Повтор того же визита возвращает
-существующую запись без новой версии. Для изменения payload передайте последнюю
-`serverVersion`: несовпадение даёт 409 с текущей записью в `current`.
+существующую запись без новой версии. Visits — неизменяемые события: другой payload даёт 409 с текущей записью в current, даже при совпадении serverVersion.
 Точки неизменяемы: повтор идентичной точки допустим, другой payload с тем же ID
 даёт 409 и откатывает весь пакет. Неизвестные связи и некорректные поля дают 400.
 
@@ -162,3 +160,40 @@ pwsh -File backend/scripts/Smoke-Test.ps1 -BaseUrl http://127.0.0.1:5081
 API рассчитан на один локальный процесс. Не запускайте несколько экземпляров
 с одним файлом SQLite и не меняйте БД внешним редактором во время работы:
 единый gate защищает границу cursor/commit только внутри этого процесса.
+
+## Версии объектов и конфликты
+
+`GET /objects` и `GET /objects/{id}` возвращают serverVersion (начинается с 1).
+`GET /visits/{id}` позволяет обновить snapshot конфликта вручную.
+`PATCH /objects/{id}` принимает id, name, address, latitude, longitude, status,
+priority, serverVersion и обязательный header `Idempotency-Key` (уникальная строка
+до 100 символов). Объект должен уже существовать; создание через PATCH не поддержано.
+Это замена перечисленных редактируемых полей, не JSON Patch RFC 6902.
+Polygon/geofenceRadius пока локальные, в PATCH не отправляются.
+
+Версия клиента 4 при серверной 5 даёт 409 Problem JSON с `current` (полный ObjectDto).
+Успех увеличивает версию на один. Check-in также увеличивает версию изменённого объекта.
+POST Visits никогда не перезаписывает существующий факт с другим payload.
+
+Успешный PATCH и OperationReceipt сохраняются одной EF/SQLite транзакцией. После
+потери ACK повтор с тем же ключом и request получает исходный response, даже если
+кто-то уже изменил объект снова. Другая нагрузка с тем же ключом даёт 409. Явное
+разрешение конфликта использует новую операцию/ключ и вновь проверяет версию.
+Receipts переживают перезапуск; автоматического TTL в pet-проекте нет.
+
+```powershell
+$api = 'http://127.0.0.1:5080'
+$o = Invoke-RestMethod "$api/objects/demo-1"
+$edit = @{ id=$o.id; name='Изменённое имя'; address=$o.address;
+  latitude=$o.latitude; longitude=$o.longitude; status=$o.status;
+  priority=$o.priority; serverVersion=$o.serverVersion }
+Invoke-RestMethod "$api/objects/$($o.id)" -Method Patch -ContentType application/json `
+  -Headers @{ 'Idempotency-Key'=[guid]::NewGuid().ToString('N') } -Body ($edit | ConvertTo-Json)
+# Другой ключ со старой версией → реальный 409 с current.
+Invoke-WebRequest "$api/objects/$($o.id)" -Method Patch -ContentType application/json `
+  -Headers @{ 'Idempotency-Key'=[guid]::NewGuid().ToString('N') } -Body ($edit | ConvertTo-Json) -SkipHttpErrorCheck
+```
+
+Скрипт `backend/scripts/Smoke-Test.ps1` проверяет PATCH, текущий snapshot, immutable
+Visits и повтор исходного PATCH после более новой записи. Используйте отдельную
+Storage:Path для этого теста: он намеренно изменяет seed-объекты.
