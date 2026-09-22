@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../domain/offline_map_pack.dart';
 import 'offline_map_controller.dart';
 
@@ -17,11 +18,14 @@ class OfflineMapDialog extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Москва · Покровка / Чистые пруды'),
+            const Text(OfflineMapPack.regionName),
             Text(
               '${OfflineMapPack.expectedTiles().length} PNG-тайлов · zoom 13–16 · до 12 MiB',
             ),
-            const Text('55.752–55.767 N, 37.632–37.655 E'),
+            const Text(
+              '${OfflineMapPack.south}–${OfflineMapPack.north} N, '
+              '${OfflineMapPack.west}–${OfflineMapPack.east} E',
+            ),
             const SizedBox(height: 12),
             Text(
               state.hasPack

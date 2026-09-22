@@ -5,8 +5,9 @@ import 'dart:typed_data';
 /// Отдельный формат карты. Эти данные никогда не попадают в sync_queue/Drift.
 class OfflineMapPack {
   OfflineMapPack(this.tiles, this.attribution);
-  static const regionId = 'moscow-pokrovka-v1';
-  static const south = 55.752, north = 55.767, west = 37.632, east = 37.655;
+  static const regionId = 'syktyvkar-railway-v1';
+  static const regionName = 'Сыктывкар · ЖД вокзал / Коммунистическая, 88';
+  static const south = 61.654, north = 61.665, west = 50.786, east = 50.807;
   static const minZoom = 13, maxZoom = 16;
   static const maxDownloadBytes = 12 * 1024 * 1024;
   static const maxTileBytes = 256 * 1024;

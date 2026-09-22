@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../data/offline_map_providers.dart';
 
 class OfflineMapState {
@@ -82,8 +83,7 @@ class OfflineMapController extends Notifier<OfflineMapState> {
       publish();
     } catch (_) {
       publish(
-        error:
-            'Пакет не установлен. Проверьте сервер, формат и разрешение на offline-использование. Прежняя карта сохранена.',
+        error: 'Пакет не установлен. Проверьте сервер, формат и разрешение на offline-использование. Прежняя карта сохранена.',
       );
     }
   }

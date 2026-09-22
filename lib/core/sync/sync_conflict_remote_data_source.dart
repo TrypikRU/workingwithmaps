@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+
 import 'sync_snapshot.dart';
 
 /// Ручное обновление конфликтного snapshot. Ответ сохраняется repository в БД,

@@ -132,9 +132,68 @@ class AppDatabase extends _$AppDatabase {
       // SQLite не включает FK автоматически. Запрещаем потерю зависимых
       // визитов/точек маршрута через случайное удаление родительской записи.
       await customStatement('PRAGMA foreign_keys = ON');
-      if (seedDemoData) await _seedObjectsIfEmpty();
+      if (seedDemoData) {
+        await _relocateLegacyDemoObjects();
+        await _seedObjectsIfEmpty();
+      }
     },
   );
+
+  /// Миграция demo-данных без изменения схемы и очистки базы. Точное совпадение
+  /// старого адреса/геометрии делает её повторяемой, в том числе между engines.
+  /// Очередь и факты визитов/треков не переписываем: их координаты исторические.
+  Future<void> _relocateLegacyDemoObjects() => transaction(() async {
+    for (final object in demoObjects) {
+      final old = legacyDemoLocations[object.id]!;
+      final row = await (select(
+        technicalObjects,
+      )..where((t) => t.id.equals(object.id))).getSingleOrNull();
+      if (row == null) continue;
+      final hasLegacyPolygon =
+          object.id == 'demo-1' &&
+          row.polygon.length == legacyDemoPolygon.length &&
+          row.polygon.indexed.every(
+            (entry) =>
+                entry.$2.latitude == legacyDemoPolygon[entry.$1].latitude &&
+                entry.$2.longitude == legacyDemoPolygon[entry.$1].longitude,
+          );
+      final isOldLocation =
+          row.address == old.address &&
+          row.latitude == old.latitude &&
+          row.longitude == old.longitude;
+      // API пока не передаёт polygon. Если refresh уже перенёс точку, старую
+      // узнаваемую demo-границу также переносим при следующем открытии базы.
+      final isNewLocation =
+          row.address == object.address &&
+          row.latitude == object.latitude &&
+          row.longitude == object.longitude;
+      if (!isOldLocation && !(isNewLocation && hasLegacyPolygon)) continue;
+      if (row.polygon.isNotEmpty && !hasLegacyPolygon) continue;
+      final queued =
+          await (select(syncQueue)
+                ..where(
+                  (q) =>
+                      q.entityType.equals('object') &
+                      q.entityId.equals(object.id),
+                )
+                ..limit(1))
+              .get();
+      // Даже failed/frozen операция должна разрешаться обычным SyncEngine,
+      // иначе её повтор мог бы молча вернуть старую геометрию на сервер.
+      if (queued.isNotEmpty) continue;
+      await (update(
+        technicalObjects,
+      )..where((t) => t.id.equals(object.id))).write(
+        TechnicalObjectsCompanion(
+          address: Value(object.address),
+          latitude: Value(object.latitude),
+          longitude: Value(object.longitude),
+          polygon: Value(object.polygon),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
+    }
+  });
 
   Future<void> _seedObjectsIfEmpty() => transaction(() async {
     final existing = await (select(technicalObjects)..limit(1)).get();

@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'location_service.dart';
 
 class RecordedPoint {
@@ -96,9 +98,9 @@ class AndroidNativeTracking implements NativeTracking {
 
   @override
   Future<NativeTrackingStatus> isTracking() async {
-    final p =
-        jsonDecode(await _call<String>('isTracking') ?? '{}')
-            as Map<String, dynamic>;
+    final p = jsonDecode(
+      await _call<String>('isTracking') ?? '{}',
+    ) as Map<String, dynamic>;
     return NativeTrackingStatus(
       running: p['running'] == true,
       routeId: p['routeId'] as String?,

@@ -53,9 +53,9 @@ Map<String, Object> objectJson({
 }) => {
   'id': id,
   'name': name,
-  'address': 'Москва',
-  'latitude': 55.75,
-  'longitude': 37.62,
+  'address': 'Сыктывкар',
+  'latitude': 61.650478,
+  'longitude': 50.770391,
   'status': 'planned',
   'priority': 'high',
   'updatedAt': '2026-09-12T12:00:00Z',
@@ -80,32 +80,29 @@ void main() {
     );
   }
 
-  test(
-    'Successful refresh inserts/updates via reactive DB and does not enqueue uploads',
-    () async {
-      final database = createTestDatabase(seedDemoData: false);
-      addTearDown(database.close);
-      repository = createRepository(database);
-      final stream = StreamIterator(repository.watchObjects());
-      addTearDown(stream.cancel);
-      await stream.moveNext();
-      expect(stream.current, isEmpty);
-      adapter.body = [objectJson()];
-      await repository.refreshObjects();
-      await stream.moveNext();
-      expect(stream.current.single.name, 'С сервера');
-      adapter.body = [objectJson(name: 'Обновлён')];
-      await repository.refreshObjects();
-      await stream.moveNext();
-      expect(stream.current.single.name, 'Обновлён');
-      expect(await database.select(database.syncQueue).get(), isEmpty);
-      expect(
-        (await database.select(database.technicalObjects).getSingle()).updatedAt
-            .toUtc(),
-        DateTime.utc(2026, 9, 12, 12),
-      );
-    },
-  );
+  test('Successful refresh inserts/updates via reactive DB and does not enqueue uploads', () async {
+    final database = createTestDatabase(seedDemoData: false);
+    addTearDown(database.close);
+    repository = createRepository(database);
+    final stream = StreamIterator(repository.watchObjects());
+    addTearDown(stream.cancel);
+    await stream.moveNext();
+    expect(stream.current, isEmpty);
+    adapter.body = [objectJson()];
+    await repository.refreshObjects();
+    await stream.moveNext();
+    expect(stream.current.single.name, 'С сервера');
+    adapter.body = [objectJson(name: 'Обновлён')];
+    await repository.refreshObjects();
+    await stream.moveNext();
+    expect(stream.current.single.name, 'Обновлён');
+    expect(await database.select(database.syncQueue).get(), isEmpty);
+    expect(
+      (await database.select(database.technicalObjects).getSingle()).updatedAt
+          .toUtc(),
+      DateTime.utc(2026, 9, 12, 12),
+    );
+  });
 
   for (final cached in [false, true]) {
     for (final kind in [
@@ -148,9 +145,8 @@ void main() {
       adapter.body = [objectJson()];
       adapter.wait = Completer<void>();
       final refresh = repository.refreshObjects();
-      final local = ObjectDto.fromJson(
-        objectJson(name: 'Локальная правка'),
-      ).toDomain();
+      final local = ObjectDto.fromJson(objectJson(name: 'Локальная правка'))
+          .toDomain();
       await repository.saveObject(local);
       adapter.wait!.complete();
       await refresh;
@@ -190,33 +186,30 @@ void main() {
     expect((await repository.watchObjects().first).single.name, 'С сервера');
   });
 
-  test(
-    'Refresh controller reports HTTP error without putting objectsProvider in error',
-    () async {
-      final database = createTestDatabase(seedDemoData: false);
-      addTearDown(database.close);
-      repository = createRepository(database);
-      adapter.body = [objectJson()];
-      await repository.refreshObjects();
-      final container = ProviderContainer(
-        overrides: [objectsRepositoryProvider.overrideWithValue(repository)],
-      );
-      addTearDown(container.dispose);
-      final subscription = container.listen(objectsProvider, (_, _) {});
-      addTearDown(subscription.close);
-      final before = await container.read(objectsProvider.future);
-      adapter.status = 500;
-      final controller = container.read(
-        objectsRefreshControllerProvider.notifier,
-      );
-      final refresh = controller.refresh();
-      expect(container.read(objectsRefreshControllerProvider), isTrue);
-      expect(await refresh, contains('Ошибка сервера'));
-      expect(container.read(objectsRefreshControllerProvider), isFalse);
-      expect(container.read(objectsProvider).hasError, isFalse);
-      expect(await container.read(objectsProvider.future), before);
-    },
-  );
+  test('Refresh controller reports HTTP error without putting objectsProvider in error', () async {
+    final database = createTestDatabase(seedDemoData: false);
+    addTearDown(database.close);
+    repository = createRepository(database);
+    adapter.body = [objectJson()];
+    await repository.refreshObjects();
+    final container = ProviderContainer(
+      overrides: [objectsRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    final subscription = container.listen(objectsProvider, (_, _) {});
+    addTearDown(subscription.close);
+    final before = await container.read(objectsProvider.future);
+    adapter.status = 500;
+    final controller = container.read(
+      objectsRefreshControllerProvider.notifier,
+    );
+    final refresh = controller.refresh();
+    expect(container.read(objectsRefreshControllerProvider), isTrue);
+    expect(await refresh, contains('Ошибка сервера'));
+    expect(container.read(objectsRefreshControllerProvider), isFalse);
+    expect(container.read(objectsProvider).hasError, isFalse);
+    expect(await container.read(objectsProvider.future), before);
+  });
 
   test(
     'DTO domain mapper round trip preserves API fields and server timestamp',

@@ -82,8 +82,7 @@ class Objects extends Table with TableInfo<Objects, ObjectsData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints:
-        'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
+    $customConstraints: 'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
     defaultValue: const CustomExpression(
       'CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER)',
     ),
@@ -586,8 +585,7 @@ class Routes extends Table with TableInfo<Routes, RoutesData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints:
-        'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
+    $customConstraints: 'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
     defaultValue: const CustomExpression(
       'CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER)',
     ),
@@ -598,8 +596,7 @@ class Routes extends Table with TableInfo<Routes, RoutesData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints:
-        'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
+    $customConstraints: 'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
     defaultValue: const CustomExpression(
       'CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER)',
     ),
@@ -1258,8 +1255,7 @@ class Visits extends Table with TableInfo<Visits, VisitsData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints:
-        'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
+    $customConstraints: 'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
     defaultValue: const CustomExpression(
       'CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER)',
     ),
@@ -1270,8 +1266,7 @@ class Visits extends Table with TableInfo<Visits, VisitsData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints:
-        'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
+    $customConstraints: 'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
     defaultValue: const CustomExpression(
       'CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER)',
     ),
@@ -2281,8 +2276,7 @@ class SyncQueue extends Table with TableInfo<SyncQueue, SyncQueueData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints:
-        'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
+    $customConstraints: 'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
     defaultValue: const CustomExpression(
       'CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER)',
     ),
@@ -3294,8 +3288,7 @@ class AppMetadata extends Table with TableInfo<AppMetadata, AppMetadataData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints:
-        'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
+    $customConstraints: 'NOT NULL DEFAULT (CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER))',
     defaultValue: const CustomExpression(
       'CAST(strftime(\'%s\', CURRENT_TIMESTAMP) AS INTEGER)',
     ),

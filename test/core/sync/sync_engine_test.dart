@@ -96,69 +96,60 @@ void main() {
     },
   );
 
-  test(
-    'Diagnostics snapshot persists successful count/time and empty run does not advance it',
-    () async {
-      final repository = SyncDiagnosticsRepository(db);
-      expect((await repository.watch().first).synced, 0);
-      await enqueue(db, 'one');
-      final stream = StreamIterator(repository.watch());
-      addTearDown(stream.cancel);
-      await stream.moveNext();
-      expect(stream.current.operations.single.status, SyncStatus.pending);
-      await engine().run();
-      final success = await repository.watch().first;
-      expect(success.synced, 1);
-      expect(success.lastSuccessAt, now);
-      expect(success.operations, isEmpty);
-      now = now.add(const Duration(hours: 1));
-      await engine().run();
-      expect(
-        (await SyncDiagnosticsRepository(db).watch().first).lastSuccessAt,
-        success.lastSuccessAt,
-      );
-      expect((await repository.watch().first).synced, 1);
-    },
-  );
+  test('Diagnostics snapshot persists successful count/time and empty run does not advance it', () async {
+    final repository = SyncDiagnosticsRepository(db);
+    expect((await repository.watch().first).synced, 0);
+    await enqueue(db, 'one');
+    final stream = StreamIterator(repository.watch());
+    addTearDown(stream.cancel);
+    await stream.moveNext();
+    expect(stream.current.operations.single.status, SyncStatus.pending);
+    await engine().run();
+    final success = await repository.watch().first;
+    expect(success.synced, 1);
+    expect(success.lastSuccessAt, now);
+    expect(success.operations, isEmpty);
+    now = now.add(const Duration(hours: 1));
+    await engine().run();
+    expect(
+      (await SyncDiagnosticsRepository(db).watch().first).lastSuccessAt,
+      success.lastSuccessAt,
+    );
+    expect((await repository.watch().first).synced, 1);
+  });
 
-  test(
-    'Manual failed retry bypasses backoff but preserves payload/key and attempt history',
-    () async {
-      await enqueue(db, 'one');
-      server.responses.addAll([500, 500, 200]);
-      await engine().run();
-      final original = await db.select(db.syncQueue).getSingle();
-      expect(original.nextRetryAt!.isAfter(now), isTrue);
-      await engine().run(retryFailed: true);
-      final failed = await db.select(db.syncQueue).getSingle();
-      expect(failed.syncStatus, SyncStatus.failed);
-      expect(failed.attemptCount, 2);
-      expect(failed.lastError, contains('server'));
-      expect(failed.payload, original.payload);
-      expect(failed.operationId, original.operationId);
-      expect((await SyncDiagnosticsRepository(db).watch().first).synced, 0);
-      await engine().run(retryFailed: true);
-      expect(await db.select(db.syncQueue).get(), isEmpty);
-      expect((await SyncDiagnosticsRepository(db).watch().first).synced, 1);
-      expect(server.keys.toSet(), hasLength(1));
-    },
-  );
+  test('Manual failed retry bypasses backoff but preserves payload/key and attempt history', () async {
+    await enqueue(db, 'one');
+    server.responses.addAll([500, 500, 200]);
+    await engine().run();
+    final original = await db.select(db.syncQueue).getSingle();
+    expect(original.nextRetryAt!.isAfter(now), isTrue);
+    await engine().run(retryFailed: true);
+    final failed = await db.select(db.syncQueue).getSingle();
+    expect(failed.syncStatus, SyncStatus.failed);
+    expect(failed.attemptCount, 2);
+    expect(failed.lastError, contains('server'));
+    expect(failed.payload, original.payload);
+    expect(failed.operationId, original.operationId);
+    expect((await SyncDiagnosticsRepository(db).watch().first).synced, 0);
+    await engine().run(retryFailed: true);
+    expect(await db.select(db.syncQueue).get(), isEmpty);
+    expect((await SyncDiagnosticsRepository(db).watch().first).synced, 1);
+    expect(server.keys.toSet(), hasLength(1));
+  });
 
-  test(
-    'Global activity stream reports automatic runs and returns to idle on error',
-    () async {
-      await enqueue(db, 'one');
-      final sync = engine();
-      final activity = <bool>[];
-      final subscription = sync.watchRunning().listen(activity.add);
-      addTearDown(subscription.cancel);
-      await pumpEventQueue();
-      server.responses.add(500);
-      await sync.run();
-      await pumpEventQueue();
-      expect(activity, [false, true, false]);
-    },
-  );
+  test('Global activity stream reports automatic runs and returns to idle on error', () async {
+    await enqueue(db, 'one');
+    final sync = engine();
+    final activity = <bool>[];
+    final subscription = sync.watchRunning().listen(activity.add);
+    addTearDown(subscription.cancel);
+    await pumpEventQueue();
+    server.responses.add(500);
+    await sync.run();
+    await pumpEventQueue();
+    expect(activity, [false, true, false]);
+  });
 
   for (final scenario in ['offline', '500', '409', '400', 'timeout']) {
     test('$scenario persists classified failure and retry state', () async {
@@ -305,39 +296,34 @@ void main() {
     },
   );
 
-  test(
-    'Crash after queue creation / interrupted claim resumes from SQLite file',
-    () async {
-      await db.close();
-      final directory = await Directory.systemTemp.createTemp('field-sync-');
-      final file = File('${directory.path}/test.sqlite');
-      db = AppDatabase.forTesting(NativeDatabase(file));
-      await enqueue(db, 'one');
-      await db.close(); // no HTTP occurred before process shutdown
-      db = AppDatabase.forTesting(NativeDatabase(file));
-      expect((await engine().run()).succeeded, 1);
-      await enqueue(db, 'two');
-      server.loseNextAck = true;
-      await engine().run();
-      final frozen = await db.select(db.syncQueue).getSingle();
-      // Model process death after server commit but before local acknowledgement.
-      await db
-          .update(db.syncQueue)
-          .write(
-            const SyncQueueCompanion(syncStatus: Value(SyncStatus.syncing)),
-          );
-      await db.close();
-      db = AppDatabase.forTesting(NativeDatabase(file));
-      expect((await engine().run()).succeeded, 1);
-      expect(server.keys.last, frozen.operationId);
-      expect(server.applied, 2);
-      expect((await SyncDiagnosticsRepository(db).watch().first).synced, 2);
-      expect(events, contains('sync.recovered'));
-      await db.close();
-      db = createTestDatabase();
-      await directory.delete(recursive: true);
-    },
-  );
+  test('Crash after queue creation / interrupted claim resumes from SQLite file', () async {
+    await db.close();
+    final directory = await Directory.systemTemp.createTemp('field-sync-');
+    final file = File('${directory.path}/test.sqlite');
+    db = AppDatabase.forTesting(NativeDatabase(file));
+    await enqueue(db, 'one');
+    await db.close(); // no HTTP occurred before process shutdown
+    db = AppDatabase.forTesting(NativeDatabase(file));
+    expect((await engine().run()).succeeded, 1);
+    await enqueue(db, 'two');
+    server.loseNextAck = true;
+    await engine().run();
+    final frozen = await db.select(db.syncQueue).getSingle();
+    // Model process death after server commit but before local acknowledgement.
+    await db
+        .update(db.syncQueue)
+        .write(const SyncQueueCompanion(syncStatus: Value(SyncStatus.syncing)));
+    await db.close();
+    db = AppDatabase.forTesting(NativeDatabase(file));
+    expect((await engine().run()).succeeded, 1);
+    expect(server.keys.last, frozen.operationId);
+    expect(server.applied, 2);
+    expect((await SyncDiagnosticsRepository(db).watch().first).synced, 2);
+    expect(events, contains('sync.recovered'));
+    await db.close();
+    db = createTestDatabase();
+    await directory.delete(recursive: true);
+  });
 
   test(
     'Unsupported legacy operation is retained and cannot block another entity',
@@ -419,31 +405,26 @@ void main() {
     expect(policy.delay(1000000), const Duration(minutes: 15));
   });
 
-  test(
-    'Local ACK rollback keeps queue; retry after repair does not reapply remotely',
-    () async {
-      await enqueue(db, 'one');
-      await db.customStatement(
-        "CREATE TEMP TRIGGER reject_ack BEFORE UPDATE ON visits WHEN NEW.sync_status = 'synced' BEGIN SELECT RAISE(ABORT, 'ack failure'); END",
-      );
-      expect((await engine().run()).failed, 1);
-      expect(server.applied, 1);
-      final failed = await db.select(db.syncQueue).getSingle();
-      expect(failed.payload, isNotNull);
-      expect(
-        (await db.select(db.visits).getSingle()).syncStatus,
-        SyncStatus.failed,
-      );
-      await db.customStatement('DROP TRIGGER reject_ack');
-      // Explicit repair: no payload/key regeneration after a possibly committed POST.
-      await db
-          .update(db.syncQueue)
-          .write(
-            const SyncQueueCompanion(syncStatus: Value(SyncStatus.pending)),
-          );
-      expect((await engine().run()).succeeded, 1);
-      expect(server.applied, 1);
-      expect(server.keys.toSet(), hasLength(1));
-    },
-  );
+  test('Local ACK rollback keeps queue; retry after repair does not reapply remotely', () async {
+    await enqueue(db, 'one');
+    await db.customStatement(
+      "CREATE TEMP TRIGGER reject_ack BEFORE UPDATE ON visits WHEN NEW.sync_status = 'synced' BEGIN SELECT RAISE(ABORT, 'ack failure'); END",
+    );
+    expect((await engine().run()).failed, 1);
+    expect(server.applied, 1);
+    final failed = await db.select(db.syncQueue).getSingle();
+    expect(failed.payload, isNotNull);
+    expect(
+      (await db.select(db.visits).getSingle()).syncStatus,
+      SyncStatus.failed,
+    );
+    await db.customStatement('DROP TRIGGER reject_ack');
+    // Explicit repair: no payload/key regeneration after a possibly committed POST.
+    await db
+        .update(db.syncQueue)
+        .write(const SyncQueueCompanion(syncStatus: Value(SyncStatus.pending)));
+    expect((await engine().run()).succeeded, 1);
+    expect(server.applied, 1);
+    expect(server.keys.toSet(), hasLength(1));
+  });
 }

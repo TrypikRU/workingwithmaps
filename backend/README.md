@@ -79,13 +79,13 @@ Invoke-RestMethod "$api/objects"
 $routes = Invoke-RestMethod "$api/routes/today"
 $visit = @{
   id = [guid]::NewGuid().ToString(); objectId = 'demo-1'; routeId = $routes[0].id
-  status = 'completed'; latitude = 55.7586; longitude = 37.6442; accuracy = 8
+  status = 'completed'; latitude = 61.659078; longitude = 50.794591; accuracy = 8
   createdAt = [DateTimeOffset]::UtcNow.ToString('o'); serverVersion = $null
 }
 Invoke-RestMethod "$api/visits" -Method Post -ContentType application/json -Body ($visit | ConvertTo-Json)
 $batch = @{ points = @(@{
   id = [guid]::NewGuid().ToString(); routeId = $routes[0].id
-  latitude = 55.7586; longitude = 37.6442; accuracy = 8; speed = $null
+  latitude = 61.659078; longitude = 50.794591; accuracy = 8; speed = $null
   timestamp = [DateTimeOffset]::UtcNow.ToString('o')
 }) }
 Invoke-RestMethod "$api/location/batch" -Method Post -ContentType application/json -Body ($batch | ConvertTo-Json -Depth 5)

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:workingwithmaps/core/location/location_service.dart';
 
 LocationFix fix({
-  double latitude = 55.759,
-  double longitude = 37.643,
+  double latitude = 61.659478,
+  double longitude = 50.793391,
   double accuracy = 8,
   int second = 0,
 }) => LocationFix(

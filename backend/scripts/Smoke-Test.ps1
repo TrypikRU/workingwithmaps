@@ -23,7 +23,7 @@ $routes = @(Request '/routes/today')
 Assert ($objects.Count -ge 5) 'Seed objects missing'
 Assert ($routes.Count -gt 0) 'Today route missing; restart server to seed current UTC day'
 $initial = Request '/sync'
-$visit = @{ id = "smoke-visit-$suffix"; objectId = $objects[0].id; routeId = $routes[0].id; status = 'completed'; latitude = 55.75; longitude = 37.64; accuracy = 5; createdAt = [DateTimeOffset]::UtcNow.ToString('o'); serverVersion = $null }
+$visit = @{ id = "smoke-visit-$suffix"; objectId = $objects[0].id; routeId = $routes[0].id; status = 'completed'; latitude = $objects[0].latitude; longitude = $objects[0].longitude; accuracy = 5; createdAt = [DateTimeOffset]::UtcNow.ToString('o'); serverVersion = $null }
 $created = Request '/visits' 'POST' $visit 201
 $afterVisit = @(Request '/objects')
 Assert (($afterVisit | Where-Object id -eq $visit.objectId).status -eq 'visited') 'Completed visit must update object status'
@@ -56,7 +56,7 @@ Assert ($replay.serverVersion -eq $first.serverVersion -and $replay.name -eq $fi
 $unchanged = (@(Request '/objects') | Where-Object id -eq $current.id)
 Assert ($unchanged.serverVersion -eq $second.serverVersion -and $unchanged.name -eq $second.name) 'Replay must not overwrite newer state'
 $null = Request $path 'PATCH' $next 409 $firstKey
-$point = @{ id = "smoke-point-$suffix"; routeId = $routes[0].id; latitude = 55.75; longitude = 37.64; accuracy = 5; speed = $null; timestamp = [DateTimeOffset]::UtcNow.ToString('o') }
+$point = @{ id = "smoke-point-$suffix"; routeId = $routes[0].id; latitude = $objects[0].latitude; longitude = $objects[0].longitude; accuracy = 5; speed = $null; timestamp = [DateTimeOffset]::UtcNow.ToString('o') }
 $batch = Request '/location/batch' 'POST' @{ points = @($point) }
 $retry = Request '/location/batch' 'POST' @{ points = @($point) }
 Assert ($batch.inserted -eq 1 -and $retry.inserted -eq 0 -and $retry.existing -eq 1) 'Batch retry created duplicates'

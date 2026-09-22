@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
 import 'clustered_object_layer.dart';
 import 'object_marker.dart';
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -209,7 +213,11 @@ class _ObjectsMapState extends State<ObjectsMap> {
                 ? _point(focused)
                 : widget.objects.isNotEmpty
                 ? _point(widget.objects.first)
-                : userPoint ?? const LatLng(55.75, 37.62),
+                : userPoint ??
+                      const LatLng(
+                        (OfflineMapPack.south + OfflineMapPack.north) / 2,
+                        (OfflineMapPack.west + OfflineMapPack.east) / 2,
+                      ),
             initialZoom: 16,
             initialCameraFit: focused == null ? _region : null,
             cameraConstraint: CameraConstraint.containCenter(

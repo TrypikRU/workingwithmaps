@@ -59,9 +59,9 @@ void main() {
   });
   test('Policy radius is configurable', () {
     expect(
-      const CheckInPolicy(
-        radius: 100,
-      ).evaluate(target, fix(latitude: 0, longitude: 0.0005)).allowed,
+      const CheckInPolicy(radius: 100)
+          .evaluate(target, fix(latitude: 0, longitude: 0.0005))
+          .allowed,
       isTrue,
     );
   });
@@ -147,9 +147,8 @@ void main() {
   test('Repository enforces radius and accuracy without trusting UI', () async {
     final db = createTestDatabase(seedDemoData: false);
     addTearDown(db.close);
-    await DriftObjectsDataSource(
-      db,
-    ).mergeRemoteObjects([(object: object, updatedAt: DateTime.utc(2026))]);
+    await DriftObjectsDataSource(db)
+        .mergeRemoteObjects([(object: object, updatedAt: DateTime.utc(2026))]);
     for (final position in [
       fix(latitude: 1, longitude: 0),
       fix(latitude: 0, longitude: 0, accuracy: 51),

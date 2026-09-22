@@ -11,6 +11,7 @@ import 'package:workingwithmaps/features/map/data/map_tile_provider.dart';
 import 'package:workingwithmaps/features/objects/domain/technical_object.dart';
 import 'package:workingwithmaps/features/objects/presentation/objects_providers.dart';
 import 'package:workingwithmaps/features/tracking/presentation/tracking_controller.dart';
+
 import '../../support/memory_tile_provider.dart';
 
 class GeometryLocation extends LocationController {

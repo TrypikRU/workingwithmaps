@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -13,6 +14,7 @@ import 'package:workingwithmaps/core/sync/sync_processor.dart';
 import 'package:workingwithmaps/core/sync/sync_run_control.dart';
 import 'package:workingwithmaps/core/sync/sync_status.dart';
 import 'package:workingwithmaps/core/utils/app_logger.dart';
+
 import '../../support/sync_server.dart';
 
 AppDatabase openFile(String path, {bool concurrent = false}) {
@@ -106,29 +108,26 @@ void main() {
     });
   }
 
-  test(
-    'Real second isolate cannot recover or send another owners syncing operation',
-    () async {
-      final db = openFile(path);
-      final server = SyncServer()..hold = Completer<void>();
-      final dio = Dio(BaseOptions(baseUrl: 'http://test/'))
-        ..httpClientAdapter = server;
-      final run = SyncEngine(SyncProcessor(db, dio: () => dio)).run();
-      while (server.requests.isEmpty) {
-        await Future<void>.delayed(const Duration(milliseconds: 5));
-      }
-      expect(await competingWorker(path), isTrue);
-      expect(
-        (await db.select(db.syncQueue).getSingle()).syncStatus,
-        SyncStatus.syncing,
-      );
-      server.hold!.complete();
-      expect((await run).succeeded, 1);
-      expect(server.applied, 1);
-      dio.close(force: true);
-      await db.close();
-    },
-  );
+  test('Real second isolate cannot recover or send another owners syncing operation', () async {
+    final db = openFile(path);
+    final server = SyncServer()..hold = Completer<void>();
+    final dio = Dio(BaseOptions(baseUrl: 'http://test/'))
+      ..httpClientAdapter = server;
+    final run = SyncEngine(SyncProcessor(db, dio: () => dio)).run();
+    while (server.requests.isEmpty) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    expect(await competingWorker(path), isTrue);
+    expect(
+      (await db.select(db.syncQueue).getSingle()).syncStatus,
+      SyncStatus.syncing,
+    );
+    server.hold!.complete();
+    expect((await run).succeeded, 1);
+    expect(server.applied, 1);
+    dio.close(force: true);
+    await db.close();
+  });
 
   test('Expired owner cannot ACK, renew or release successors lease', () async {
     final first = openFile(path);
@@ -212,9 +211,8 @@ void main() {
       final dio = Dio(BaseOptions(baseUrl: 'http://test/'))
         ..httpClientAdapter = server;
       final control = SyncRunControl();
-      final run = SyncEngine(
-        SyncProcessor(db, dio: () => dio),
-      ).run(control: control);
+      final run = SyncEngine(SyncProcessor(db, dio: () => dio))
+          .run(control: control);
       while (server.requests.isEmpty) {
         await Future<void>.delayed(const Duration(milliseconds: 5));
       }

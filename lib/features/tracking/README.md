@@ -142,9 +142,9 @@ Emulator: образ Google APIs/Google Play, Extended Controls → Location →
 GPX с walking speed. Либо одиночные точки (порядок longitude, latitude):
 
 ```powershell
-adb emu geo fix 37.64420 55.75860
+adb emu geo fix 50.794591 61.659078
 # Подождите ≥5 секунд, затем переместитесь примерно на 10 м:
-adb emu geo fix 37.64436 55.75860
+adb emu geo fix 50.794751 61.659078
 ```
 
 Не делайте большие мгновенные телепортации: фильтр скорости корректно их отбрасывает.

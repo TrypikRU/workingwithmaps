@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 
@@ -102,9 +103,8 @@ class _ClusteredObjectLayerState extends State<ClusteredObjectLayer> {
             group.single
           else
             Marker(
-              point: LatLngBounds.fromPoints(
-                group.map((m) => m.point).toList(),
-              ).center,
+              point: LatLngBounds.fromPoints(group.map((m) => m.point).toList())
+                  .center,
               width: 48,
               height: 48,
               child: Tooltip(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import '../database/app_database.dart';
 import '../../features/objects/data/object_dto.dart';
 import '../../features/visits/domain/visit_status.dart';
@@ -89,12 +90,12 @@ Map<String, dynamic>? validatedServerSnapshot(
         'latitude': lat,
         'longitude': lon,
         'accuracy': accuracy,
-        'createdAt': DateTime.parse(
-          data['createdAt'] as String,
-        ).toUtc().toIso8601String(),
-        'updatedAt': DateTime.parse(
-          data['updatedAt'] as String,
-        ).toUtc().toIso8601String(),
+        'createdAt': DateTime.parse(data['createdAt'] as String)
+            .toUtc()
+            .toIso8601String(),
+        'updatedAt': DateTime.parse(data['updatedAt'] as String)
+            .toUtc()
+            .toIso8601String(),
         'serverVersion': data['serverVersion'],
       };
     }

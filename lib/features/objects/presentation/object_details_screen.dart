@@ -108,9 +108,8 @@ class ObjectDetailsScreen extends ConsumerWidget {
                               .read(checkInControllerProvider.notifier)
                               .checkIn(item.id);
                           if (context.mounted && message != null) {
-                            ScaffoldMessenger.of(
-                              context,
-                            ).showSnackBar(SnackBar(content: Text(message)));
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(SnackBar(content: Text(message)));
                           }
                         },
                   icon: const Icon(Icons.how_to_reg_outlined),

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/geometry/circular_geofence.dart';
 import '../../../core/geometry/geo_point.dart';
 import '../../../core/location/location_controller.dart';

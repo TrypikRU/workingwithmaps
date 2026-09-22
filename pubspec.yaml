@@ -4,12 +4,15 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.2
+  sdk: ^3.13.4
+  flutter: '>=3.47.5'
 
 dependencies:
+  # go_router 18 pulls in cupertino_ui, whose reachable icons need this font.
+  cupertino_icons: ^1.0.9
   dio: ^5.11.1
   # Keep runtime and generator aligned: newer patches change the preview API.
-  drift: 2.34.0
+  drift: 2.35.0
   drift_flutter: ^0.3.1
   flutter:
     sdk: flutter
@@ -17,7 +20,7 @@ dependencies:
   flutter_riverpod: ^3.4.3
   freezed_annotation: ^3.1.0
   geolocator: ^14.0.3
-  go_router: ^17.5.0
+  go_router: ^18.0.1
   json_annotation: ^4.12.0
   latlong2: ^0.10.1
   path_provider: ^2.1.6
@@ -28,10 +31,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: ^2.7.1
-  freezed: ^3.2.5
+  build_runner: ^2.16.1
+  freezed: ^4.0.2
   json_serializable: ^6.11.2
-  drift_dev: 2.34.0
+  drift_dev: 2.35.0
 
 flutter:
   uses-material-design: true

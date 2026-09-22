@@ -28,8 +28,8 @@ void main() {
         routeId,
         'segment',
         LocationFix(
-          latitude: 55.75,
-          longitude: 37.61,
+          latitude: 61.650478,
+          longitude: 50.760391,
           accuracy: 5,
           speed: 1,
           timestamp: DateTime.now().toUtc(),

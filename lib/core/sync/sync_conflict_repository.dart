@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:drift/drift.dart';
+
 import '../database/app_database.dart' hide SyncConflict;
 import '../utils/app_logger.dart';
 import '../../features/objects/data/object_dto.dart';

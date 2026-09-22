@@ -50,9 +50,7 @@ class MapScreen extends ConsumerWidget {
             const LocationStatusPanel(),
             if (offline.hasPack || offline.offlineOnly)
               Text(
-                offline.offlineOnly
-                    ? 'Только offline · Покровка · zoom 13–16'
-                    : 'Offline-регион сохранён · вне покрытия используется сеть',
+                offline.offlineOnly ? 'Только offline · Покровка · zoom 13–16' : 'Offline-регион сохранён · вне покрытия используется сеть',
               ),
             if (nearby != null)
               Padding(

@@ -1,6 +1,7 @@
 import '../../support/test_database.dart';
 import '../../support/memory_tile_provider.dart';
 import '../../support/fake_location_service.dart';
+
 import 'package:workingwithmaps/core/location/location_controller.dart';
 
 import 'package:flutter/material.dart';
@@ -67,9 +68,8 @@ void main() {
         findsOneWidget,
       );
       expect(
-        controller(tester).camera.visibleBounds.contains(
-          LatLng(object.latitude, object.longitude),
-        ),
+        controller(tester).camera.visibleBounds
+            .contains(LatLng(object.latitude, object.longitude)),
         isTrue,
       );
     }
@@ -99,9 +99,8 @@ void main() {
     await tester.pumpAndSettle();
     for (final item in objects) {
       expect(
-        controller(
-          tester,
-        ).camera.visibleBounds.contains(LatLng(item.latitude, item.longitude)),
+        controller(tester).camera.visibleBounds
+            .contains(LatLng(item.latitude, item.longitude)),
         isTrue,
       );
     }

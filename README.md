@@ -216,7 +216,7 @@ GPS-reported speed хранится, но не считается доказат
 **Offline business data и offline map tiles — разные механизмы.** Отсутствие
 подложки карты не лишает пользователя объектов, визитов и маршрута в Drift.
 
-Для MVP выбран регион Покровка / Чистые пруды в Москве: 39 PNG-тайлов, zoom 13–16.
+Для MVP выбран регион ЖД вокзал / Коммунистическая, 88 в Сыктывкаре: 40 PNG-тайлов, zoom 13–16.
 Python-утилита конвертирует разрешённый raster MBTiles в небольшой JSON/PNG-пакет.
 Приложение скачивает готовый пакет с собственного сервера, проверяет полноту,
 формат и лимиты, затем устанавливает его в отдельный каталог.
@@ -234,9 +234,9 @@ fallback. В режиме «Только offline-тайлы» сетевых з�
 
 | Область | Технологии |
 | --- | --- |
-| Mobile | Flutter 3.44.5 / Dart 3.12.2, Android-only |
+| Mobile | Flutter 3.47.5 / Dart 3.13.4, Android-only |
 | State / navigation | Riverpod, go_router |
-| Storage / models | Drift 2.34.0, SQLite, Freezed, json_serializable, build_runner |
+| Storage / models | Drift 2.35.0, SQLite, Freezed, json_serializable, build_runner |
 | Network / maps | Dio, flutter_map, OpenStreetMap, latlong2 |
 | Location / background | geolocator, workmanager, Kotlin, MethodChannel, FusedLocationProviderClient |
 | Backend | ASP.NET Core Web API, .NET 10, EF Core SQLite, Swagger |
@@ -258,7 +258,18 @@ geometry/clustering пакета. Версии зависимостей зафи
 
 ## How to run
 
-Потребуются Flutter 3.44.5 stable, Android SDK, JDK 17, .NET 10 SDK; для native GPS —
+Demo-объекты и offline-регион расположены в Сыктывкаре возле ЖД вокзала,
+ориентир — Коммунистическая, 88. Это синтетические объекты и границы.
+При открытии старой локальной БД прежние demo-адреса и координаты переносятся
+без очистки данных. Пользовательская геометрия и объекты с операциями в очереди
+не перезаписываются; сначала синхронизируйте/разрешите их изменения.
+Визиты и GPS-история сохраняют исходные координаты. Backend переносит свой
+старый seed при перезапуске и увеличивает `serverVersion`, чтобы старый PATCH
+обрабатывался как конфликт. После обновления backend обновите объекты в приложении.
+Для offline-карты подготовьте новый пакет `syktyvkar-railway-v1`
+по [инструкции](docs/OFFLINE_MAPS.md); прежний регион не используется.
+
+Потребуются Flutter 3.47.5 stable, Android SDK, JDK 17, .NET 10 SDK; для native GPS —
 Android device/emulator с Google Play Services / Google APIs. Для smoke-скрипта нужен
 PowerShell 7.5+; Python 3 нужен только для подготовки/проверки offline-пакета.
 
@@ -277,6 +288,19 @@ flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://10.0.2.2:50
 локальный seed, Check-in и обход. Для серверного обновления нажмите refresh на
 карте или в списке объектов. Package name: `workingwithmaps`;
 Android applicationId: `com.klochkov.workingwithmaps`.
+
+Android-сборка использует AGP 9.0.1, Gradle 9.1 и встроенный Kotlin
+(`android.builtInKotlin=true`). Kotlin 2.3.20 объявлен с `apply false`, чтобы
+обновить компилятор относительно встроенного в AGP 9.0 Kotlin 2.2.10;
+отдельный Kotlin Android plugin к модулю приложения не применяется.
+`android.newDsl=false` пока сохраняет совместимость DSL плагинов.
+
+Flutter 3.47.5 может печатать предупреждение о KGP для `workmanager_android`
+0.10.9: проверка Flutter ищет `apply plugin` регулярным выражением, включая
+условную ветку для старых сборок. При включённом built-in Kotlin эта ветка
+WorkManager не выполняется. Не исправляйте предупреждение изменением Pub Cache
+или отключением проверки зависимостей; при обновлении Flutter/WorkManager
+повторно проверяйте Android-сборку.
 
 ### ASP.NET Core backend
 
@@ -354,8 +378,8 @@ python -m unittest discover -s tools/offline_maps -v
 ./gradlew :app:testDebugUnitTest
 ```
 
-В обычном Flutter-запуске 149 тестов и 3 opt-in HTTP-сценария; с `SYNC_TEST_URL`
-все 152 сценария выполняются. Результаты финального прогона и границы аудита:
+В обычном Flutter-запуске 152 теста и 3 opt-in HTTP-сценария; с `SYNC_TEST_URL`
+запускаются все 155 сценариев. Результаты предыдущего аудита и его границы:
 [Final review](docs/FINAL_REVIEW.md), [карта покрытия](docs/AUDIT.md).
 
 ### CI

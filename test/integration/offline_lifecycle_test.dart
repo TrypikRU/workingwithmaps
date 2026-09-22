@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +13,7 @@ import 'package:workingwithmaps/features/objects/data/objects_remote_data_source
 import 'package:workingwithmaps/features/objects/data/objects_repository.dart';
 import 'package:workingwithmaps/features/objects/domain/technical_object.dart';
 import 'package:workingwithmaps/features/visits/data/visits_repository.dart';
+
 import '../support/fake_location_service.dart';
 import '../support/sync_server.dart';
 

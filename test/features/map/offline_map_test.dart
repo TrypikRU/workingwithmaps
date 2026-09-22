@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:workingwithmaps/features/map/data/map_tile_provider.dart';
 import 'package:workingwithmaps/features/map/data/offline_map_repository.dart';
 import 'package:workingwithmaps/features/map/domain/offline_map_pack.dart';
+import 'package:workingwithmaps/features/objects/data/demo_objects.dart';
 
 class PackTransport implements HttpClientAdapter {
   List<int> data = [];
@@ -56,12 +58,43 @@ void main() {
   };
 
   test(
+    'Railway offline region includes the demo objects and rejects old packs',
+    () {
+      for (final object in demoObjects) {
+        expect(
+          object.latitude,
+          inInclusiveRange(OfflineMapPack.south, OfflineMapPack.north),
+        );
+        expect(
+          object.longitude,
+          inInclusiveRange(OfflineMapPack.west, OfflineMapPack.east),
+        );
+        for (final point in object.polygon) {
+          expect(
+            point.latitude,
+            inInclusiveRange(OfflineMapPack.south, OfflineMapPack.north),
+          );
+          expect(
+            point.longitude,
+            inInclusiveRange(OfflineMapPack.west, OfflineMapPack.east),
+          );
+        }
+      }
+      final old = manifest()..['region'] = 'moscow-pokrovka-v1';
+      expect(
+        () => OfflineMapPack.parse(utf8.encode(jsonEncode(old))),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test(
     'Only complete fixed-region pack with bounded PNG tiles is accepted',
     () {
       final json = manifest();
       expect(
         OfflineMapPack.parse(utf8.encode(jsonEncode(json))).tiles,
-        hasLength(39),
+        hasLength(40),
       );
       (json['tiles'] as Map).remove((json['tiles'] as Map).keys.first);
       expect(
@@ -104,7 +137,7 @@ void main() {
           final joined = repo.download(url, (_) {});
           await Future.wait([first, joined]);
           expect(transport.requests, 1);
-          expect(repo.pack!.tiles, hasLength(39));
+          expect(repo.pack!.tiles, hasLength(40));
           final installed = repo.pack;
           transport.data = utf8.encode('{}');
           await expectLater(repo.download(url, (_) {}), throwsA(anything));
@@ -114,7 +147,7 @@ void main() {
             directory: () async => folder,
           );
           await restarted.load();
-          expect(restarted.pack!.tiles, hasLength(39));
+          expect(restarted.pack!.tiles, hasLength(40));
           // Existing package can be replaced on Windows without deleting it first.
           transport.data = utf8.encode(jsonEncode(manifest()));
           await restarted.download(url, (_) {});

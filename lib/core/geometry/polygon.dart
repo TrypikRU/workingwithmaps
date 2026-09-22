@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'geo_point.dart';
 
 /// Simple local ring, without holes. Edges are straight in longitude/latitude.

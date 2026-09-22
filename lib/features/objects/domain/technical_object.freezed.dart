@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'technical_object.dart';
@@ -9,6 +9,7 @@ part of 'technical_object.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 
@@ -28,16 +29,21 @@ $TechnicalObjectCopyWith<TechnicalObject> get copyWith => _$TechnicalObjectCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TechnicalObject&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.status, status) || other.status == status)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.serverVersion, serverVersion) || other.serverVersion == serverVersion)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&const DeepCollectionEquality().equals(other.polygon, polygon));
+  final _this = this as TechnicalObject;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TechnicalObject&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.address, _this.address) || other.address == _this.address)&&(identical(other.latitude, _this.latitude) || other.latitude == _this.latitude)&&(identical(other.longitude, _this.longitude) || other.longitude == _this.longitude)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.priority, _this.priority) || other.priority == _this.priority)&&(identical(other.serverVersion, _this.serverVersion) || other.serverVersion == _this.serverVersion)&&(identical(other.geofenceRadius, _this.geofenceRadius) || other.geofenceRadius == _this.geofenceRadius)&&const DeepCollectionEquality().equals(other.polygon, _this.polygon));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,address,latitude,longitude,status,priority,serverVersion,geofenceRadius,const DeepCollectionEquality().hash(polygon));
+int get hashCode {
+  final _this = this as TechnicalObject;
+  return Object.hash(runtimeType,_this.id,_this.name,_this.address,_this.latitude,_this.longitude,_this.status,_this.priority,_this.serverVersion,_this.geofenceRadius,const DeepCollectionEquality().hash(_this.polygon));
+}
 
 @override
 String toString() {
-  return 'TechnicalObject(id: $id, name: $name, address: $address, latitude: $latitude, longitude: $longitude, status: $status, priority: $priority, serverVersion: $serverVersion, geofenceRadius: $geofenceRadius, polygon: $polygon)';
+  final _this = this as TechnicalObject;
+  return 'TechnicalObject(id: ${_this.id}, name: ${_this.name}, address: ${_this.address}, latitude: ${_this.latitude}, longitude: ${_this.longitude}, status: ${_this.status}, priority: ${_this.priority}, serverVersion: ${_this.serverVersion}, geofenceRadius: ${_this.geofenceRadius}, polygon: ${_this.polygon})';
 }
 
 
@@ -66,7 +72,7 @@ class _$TechnicalObjectCopyWithImpl<$Res>
 /// Create a copy of TechnicalObject
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? latitude = null,Object? longitude = null,Object? status = null,Object? priority = null,Object? serverVersion = freezed,Object? geofenceRadius = null,Object? polygon = null,}) {
-  return _then(_self.copyWith(
+  return _then(TechnicalObject(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
@@ -218,7 +224,7 @@ return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude
 @JsonSerializable()
 
 class _TechnicalObject implements TechnicalObject {
-  const _TechnicalObject({required this.id, required this.name, this.address = '', required this.latitude, required this.longitude, this.status = ObjectStatus.planned, this.priority = ObjectPriority.normal, this.serverVersion, this.geofenceRadius = 50.0, final  List<GeoPoint> polygon = const <GeoPoint>[]}): _polygon = polygon;
+  const _TechnicalObject({required this.id, required this.name, this.address = '', required this.latitude, required this.longitude, this.status = ObjectStatus.planned, this.priority = ObjectPriority.normal, this.serverVersion, this.geofenceRadius = 50.0,  List<GeoPoint> polygon = const <GeoPoint>[]}): _polygon = polygon;
   factory _TechnicalObject.fromJson(Map<String, dynamic> json) => _$TechnicalObjectFromJson(json);
 
 @override final  String id;
@@ -251,16 +257,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TechnicalObject&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.status, status) || other.status == status)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.serverVersion, serverVersion) || other.serverVersion == serverVersion)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&const DeepCollectionEquality().equals(other._polygon, _polygon));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TechnicalObject&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.status, status) || other.status == status)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.serverVersion, serverVersion) || other.serverVersion == serverVersion)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&const DeepCollectionEquality().equals(other.polygon, _polygon));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,address,latitude,longitude,status,priority,serverVersion,geofenceRadius,const DeepCollectionEquality().hash(_polygon));
+int get hashCode {
+    return Object.hash(runtimeType,id,name,address,latitude,longitude,status,priority,serverVersion,geofenceRadius,const DeepCollectionEquality().hash(_polygon));
+}
 
 @override
 String toString() {
-  return 'TechnicalObject(id: $id, name: $name, address: $address, latitude: $latitude, longitude: $longitude, status: $status, priority: $priority, serverVersion: $serverVersion, geofenceRadius: $geofenceRadius, polygon: $polygon)';
+    return 'TechnicalObject(id: $id, name: $name, address: $address, latitude: $latitude, longitude: $longitude, status: $status, priority: $priority, serverVersion: $serverVersion, geofenceRadius: $geofenceRadius, polygon: $polygon)';
 }
 
 

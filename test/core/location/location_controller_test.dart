@@ -179,21 +179,18 @@ void main() {
     expect(state().position, isNull);
   });
 
-  test(
-    'timeout is recoverable; existing cached position is not considered current',
-    () async {
-      service.access = LocationAccess.granted;
-      service.lastKnown = fix(second: -20);
-      service.currentError = const LocationFailure(LocationFailureKind.timeout);
-      await controller.resume();
-      expect(state().status, LocationStatus.error);
-      expect(state().message, contains('20 секунд'));
-      expect(state().canCenter, isFalse);
-      service.currentError = null;
-      await controller.refresh();
-      expect(state().status, LocationStatus.available);
-    },
-  );
+  test('timeout is recoverable; existing cached position is not considered current', () async {
+    service.access = LocationAccess.granted;
+    service.lastKnown = fix(second: -20);
+    service.currentError = const LocationFailure(LocationFailureKind.timeout);
+    await controller.resume();
+    expect(state().status, LocationStatus.error);
+    expect(state().message, contains('20 секунд'));
+    expect(state().canCenter, isFalse);
+    service.currentError = null;
+    await controller.refresh();
+    expect(state().status, LocationStatus.available);
+  });
 
   test('unavailable settings become a visible error', () async {
     await controller.resume();

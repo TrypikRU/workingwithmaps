@@ -4727,7 +4727,9 @@ class $$TechnicalObjectsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$TechnicalObjectsTable, TechnicalObjectRow>(
+                    table,
+                  ),
                   $$TechnicalObjectsTableReferences(db, table, e),
                 ),
               )
@@ -4807,28 +4809,26 @@ typedef $$TechnicalObjectsTableProcessedTableManager =
       TechnicalObjectRow,
       PrefetchHooks Function({bool routeObjectsRefs, bool visitsRefs})
     >;
-typedef $$RoutesTableCreateCompanionBuilder =
-    RoutesCompanion Function({
-      required String id,
-      required String name,
-      Value<RouteStatus> status,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-      Value<SyncStatus> syncStatus,
-      Value<int?> serverVersion,
-      Value<int> rowid,
-    });
-typedef $$RoutesTableUpdateCompanionBuilder =
-    RoutesCompanion Function({
-      Value<String> id,
-      Value<String> name,
-      Value<RouteStatus> status,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-      Value<SyncStatus> syncStatus,
-      Value<int?> serverVersion,
-      Value<int> rowid,
-    });
+typedef $$RoutesTableCreateCompanionBuilder = RoutesCompanion Function({
+  required String id,
+  required String name,
+  Value<RouteStatus> status,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<SyncStatus> syncStatus,
+  Value<int?> serverVersion,
+  Value<int> rowid,
+});
+typedef $$RoutesTableUpdateCompanionBuilder = RoutesCompanion Function({
+  Value<String> id,
+  Value<String> name,
+  Value<RouteStatus> status,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<SyncStatus> syncStatus,
+  Value<int?> serverVersion,
+  Value<int> rowid,
+});
 
 final class $$RoutesTableReferences
     extends BaseReferences<_$AppDatabase, $RoutesTable, RouteRow> {
@@ -5240,8 +5240,10 @@ class $$RoutesTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$RoutesTableReferences(db, table, e)),
+                (e) => (
+                  e.readTable<$RoutesTable, RouteRow>(table),
+                  $$RoutesTableReferences(db, table, e),
+                ),
               )
               .toList(),
           prefetchHooksCallback:
@@ -5633,7 +5635,7 @@ class $$RouteObjectsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$RouteObjectsTable, RouteObject>(table),
                   $$RouteObjectsTableReferences(db, table, e),
                 ),
               )
@@ -5659,30 +5661,26 @@ class $$RouteObjectsTableTableManager
                     >
                   >(state) {
                     if (routeId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.routeId,
-                                referencedTable: $$RouteObjectsTableReferences
-                                    ._routeIdTable(db),
-                                referencedColumn: $$RouteObjectsTableReferences
-                                    ._routeIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.routeId,
+                        referencedTable: $$RouteObjectsTableReferences
+                            ._routeIdTable(db),
+                        referencedColumn: $$RouteObjectsTableReferences
+                            ._routeIdTable(db)
+                            .id,
+                      ) as T;
                     }
                     if (objectId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.objectId,
-                                referencedTable: $$RouteObjectsTableReferences
-                                    ._objectIdTable(db),
-                                referencedColumn: $$RouteObjectsTableReferences
-                                    ._objectIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.objectId,
+                        referencedTable: $$RouteObjectsTableReferences
+                            ._objectIdTable(db),
+                        referencedColumn: $$RouteObjectsTableReferences
+                            ._objectIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -5710,36 +5708,34 @@ typedef $$RouteObjectsTableProcessedTableManager =
       RouteObject,
       PrefetchHooks Function({bool routeId, bool objectId})
     >;
-typedef $$VisitsTableCreateCompanionBuilder =
-    VisitsCompanion Function({
-      required String id,
-      required String objectId,
-      Value<String?> routeId,
-      Value<VisitStatus> status,
-      required double latitude,
-      required double longitude,
-      required double accuracy,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-      Value<SyncStatus> syncStatus,
-      Value<int?> serverVersion,
-      Value<int> rowid,
-    });
-typedef $$VisitsTableUpdateCompanionBuilder =
-    VisitsCompanion Function({
-      Value<String> id,
-      Value<String> objectId,
-      Value<String?> routeId,
-      Value<VisitStatus> status,
-      Value<double> latitude,
-      Value<double> longitude,
-      Value<double> accuracy,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-      Value<SyncStatus> syncStatus,
-      Value<int?> serverVersion,
-      Value<int> rowid,
-    });
+typedef $$VisitsTableCreateCompanionBuilder = VisitsCompanion Function({
+  required String id,
+  required String objectId,
+  Value<String?> routeId,
+  Value<VisitStatus> status,
+  required double latitude,
+  required double longitude,
+  required double accuracy,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<SyncStatus> syncStatus,
+  Value<int?> serverVersion,
+  Value<int> rowid,
+});
+typedef $$VisitsTableUpdateCompanionBuilder = VisitsCompanion Function({
+  Value<String> id,
+  Value<String> objectId,
+  Value<String?> routeId,
+  Value<VisitStatus> status,
+  Value<double> latitude,
+  Value<double> longitude,
+  Value<double> accuracy,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<SyncStatus> syncStatus,
+  Value<int?> serverVersion,
+  Value<int> rowid,
+});
 
 final class $$VisitsTableReferences
     extends BaseReferences<_$AppDatabase, $VisitsTable, Visit> {
@@ -6156,8 +6152,10 @@ class $$VisitsTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$VisitsTableReferences(db, table, e)),
+                (e) => (
+                  e.readTable<$VisitsTable, Visit>(table),
+                  $$VisitsTableReferences(db, table, e),
+                ),
               )
               .toList(),
           prefetchHooksCallback: ({objectId = false, routeId = false}) {
@@ -6181,30 +6179,28 @@ class $$VisitsTableTableManager
                     >
                   >(state) {
                     if (objectId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.objectId,
-                                referencedTable: $$VisitsTableReferences
-                                    ._objectIdTable(db),
-                                referencedColumn: $$VisitsTableReferences
-                                    ._objectIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.objectId,
+                        referencedTable: $$VisitsTableReferences._objectIdTable(
+                          db,
+                        ),
+                        referencedColumn: $$VisitsTableReferences
+                            ._objectIdTable(db)
+                            .id,
+                      ) as T;
                     }
                     if (routeId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.routeId,
-                                referencedTable: $$VisitsTableReferences
-                                    ._routeIdTable(db),
-                                referencedColumn: $$VisitsTableReferences
-                                    ._routeIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.routeId,
+                        referencedTable: $$VisitsTableReferences._routeIdTable(
+                          db,
+                        ),
+                        referencedColumn: $$VisitsTableReferences
+                            ._routeIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -6571,7 +6567,7 @@ class $$LocationPointsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$LocationPointsTable, LocationPoint>(table),
                   $$LocationPointsTableReferences(db, table, e),
                 ),
               )
@@ -6597,18 +6593,15 @@ class $$LocationPointsTableTableManager
                     >
                   >(state) {
                     if (routeId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.routeId,
-                                referencedTable: $$LocationPointsTableReferences
-                                    ._routeIdTable(db),
-                                referencedColumn:
-                                    $$LocationPointsTableReferences
-                                        ._routeIdTable(db)
-                                        .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.routeId,
+                        referencedTable: $$LocationPointsTableReferences
+                            ._routeIdTable(db),
+                        referencedColumn: $$LocationPointsTableReferences
+                            ._routeIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -6636,34 +6629,32 @@ typedef $$LocationPointsTableProcessedTableManager =
       LocationPoint,
       PrefetchHooks Function({bool routeId})
     >;
-typedef $$SyncQueueTableCreateCompanionBuilder =
-    SyncQueueCompanion Function({
-      Value<String?> operationId,
-      Value<String?> payload,
-      Value<SyncStatus> syncStatus,
-      Value<int> id,
-      required String entityType,
-      required String entityId,
-      required String operation,
-      Value<DateTime> createdAt,
-      Value<int> attemptCount,
-      Value<String?> lastError,
-      Value<DateTime?> nextRetryAt,
-    });
-typedef $$SyncQueueTableUpdateCompanionBuilder =
-    SyncQueueCompanion Function({
-      Value<String?> operationId,
-      Value<String?> payload,
-      Value<SyncStatus> syncStatus,
-      Value<int> id,
-      Value<String> entityType,
-      Value<String> entityId,
-      Value<String> operation,
-      Value<DateTime> createdAt,
-      Value<int> attemptCount,
-      Value<String?> lastError,
-      Value<DateTime?> nextRetryAt,
-    });
+typedef $$SyncQueueTableCreateCompanionBuilder = SyncQueueCompanion Function({
+  Value<String?> operationId,
+  Value<String?> payload,
+  Value<SyncStatus> syncStatus,
+  Value<int> id,
+  required String entityType,
+  required String entityId,
+  required String operation,
+  Value<DateTime> createdAt,
+  Value<int> attemptCount,
+  Value<String?> lastError,
+  Value<DateTime?> nextRetryAt,
+});
+typedef $$SyncQueueTableUpdateCompanionBuilder = SyncQueueCompanion Function({
+  Value<String?> operationId,
+  Value<String?> payload,
+  Value<SyncStatus> syncStatus,
+  Value<int> id,
+  Value<String> entityType,
+  Value<String> entityId,
+  Value<String> operation,
+  Value<DateTime> createdAt,
+  Value<int> attemptCount,
+  Value<String?> lastError,
+  Value<DateTime?> nextRetryAt,
+});
 
 class $$SyncQueueTableFilterComposer
     extends Composer<_$AppDatabase, $SyncQueueTable> {
@@ -6932,7 +6923,16 @@ class $$SyncQueueTableTableManager
                 nextRetryAt: nextRetryAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$SyncQueueTable, SyncQueueData>(table),
+                  BaseReferences<_$AppDatabase, $SyncQueueTable, SyncQueueData>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -7233,7 +7233,16 @@ class $$SyncConflictsTableTableManager
                 resolution: resolution,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$SyncConflictsTable, SyncConflict>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SyncConflictsTable,
+                    SyncConflict
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -7395,7 +7404,16 @@ class $$AppMetadataTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$AppMetadataTable, AppMetadataData>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $AppMetadataTable,
+                    AppMetadataData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:workingwithmaps/core/database/app_database.dart';
 
@@ -132,8 +133,8 @@ Future<void> enqueue(AppDatabase db, String id) => db.transaction(() async {
         VisitsCompanion.insert(
           id: id,
           objectId: 'demo-1',
-          latitude: 55.7586,
-          longitude: 37.6442,
+          latitude: 61.659078,
+          longitude: 50.794591,
           accuracy: 8,
         ),
       );

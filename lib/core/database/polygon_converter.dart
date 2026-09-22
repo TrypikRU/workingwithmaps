@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:drift/drift.dart';
+
 import '../geometry/geo_point.dart';
 import '../geometry/polygon.dart';
 

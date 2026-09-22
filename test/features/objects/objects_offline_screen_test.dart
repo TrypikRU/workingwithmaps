@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:workingwithmaps/core/database/database_provider.dart';
 import 'package:workingwithmaps/core/network/dio_provider.dart';
 import 'package:workingwithmaps/features/objects/presentation/objects_screen.dart';
+
 import '../../support/test_database.dart';
 import 'objects_refresh_test.dart' show TestAdapter;
 

@@ -45,8 +45,7 @@ void syncCallbackDispatcher() {
         'task': task,
         'reason': reason.name,
       });
-      active
-          ?.cancel(); // Return promptly; sudden engine destruction uses lease expiry.
+      active?.cancel(); // Return promptly; sudden engine destruction uses lease expiry.
     },
   );
 }

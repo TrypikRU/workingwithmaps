@@ -1,5 +1,7 @@
 import 'dart:io';
+
 import 'package:workingwithmaps/core/location/native_tracking.dart';
+
 import '../../support/fake_native_tracking.dart';
 
 import 'package:drift/native.dart';
@@ -53,9 +55,8 @@ void main() {
       PointRejection.speed,
     );
     expect(
-      const LocationPointFilter(
-        maxSpeed: 2,
-      ).reject(sample(0.0001, 1), previous: sample(0, 0)),
+      const LocationPointFilter(maxSpeed: 2)
+          .reject(sample(0.0001, 1), previous: sample(0, 0)),
       PointRejection.speed,
     );
   });
@@ -116,34 +117,26 @@ void main() {
     expect(await db.select(db.syncQueue).get(), hasLength(1));
   });
 
-  test(
-    'Active route and saved segments survive file restart; gaps are not distance',
-    () async {
-      final directory = await Directory.systemTemp.createTemp(
-        'field-tracking-',
-      );
-      final file = File('${directory.path}/track.sqlite');
-      var db = AppDatabase.forTesting(NativeDatabase(file));
-      var repo = RouteRepository(db);
-      final id = await repo.start();
-      await repo.append(id, 'before-restart', sample(0, 0));
-      await repo.append(id, 'before-restart', sample(0.0001, 10));
-      await db.close();
-      db = AppDatabase.forTesting(NativeDatabase(file));
-      repo = RouteRepository(db);
-      expect((await repo.watchCurrent().first)!.id, id);
-      expect((await repo.watchCurrent().first)!.status, RouteStatus.active);
-      expect(await repo.start(), id);
-      await repo.append(id, 'after-restart', sample(1, 20));
-      expect((await repo.watchCurrent().first)!.points, hasLength(3));
-      expect(
-        (await repo.watchCurrent().first)!.distance,
-        closeTo(11.1195, 0.01),
-      );
-      await db.close();
-      await directory.delete(recursive: true);
-    },
-  );
+  test('Active route and saved segments survive file restart; gaps are not distance', () async {
+    final directory = await Directory.systemTemp.createTemp('field-tracking-');
+    final file = File('${directory.path}/track.sqlite');
+    var db = AppDatabase.forTesting(NativeDatabase(file));
+    var repo = RouteRepository(db);
+    final id = await repo.start();
+    await repo.append(id, 'before-restart', sample(0, 0));
+    await repo.append(id, 'before-restart', sample(0.0001, 10));
+    await db.close();
+    db = AppDatabase.forTesting(NativeDatabase(file));
+    repo = RouteRepository(db);
+    expect((await repo.watchCurrent().first)!.id, id);
+    expect((await repo.watchCurrent().first)!.status, RouteStatus.active);
+    expect(await repo.start(), id);
+    await repo.append(id, 'after-restart', sample(1, 20));
+    expect((await repo.watchCurrent().first)!.points, hasLength(3));
+    expect((await repo.watchCurrent().first)!.distance, closeTo(11.1195, 0.01));
+    await db.close();
+    await directory.delete(recursive: true);
+  });
 
   test(
     'Check-in attaches to active route and appears in visited list',
@@ -155,8 +148,8 @@ void main() {
       await VisitsRepository(db).checkIn(
         objectId: 'demo-1',
         position: LocationFix(
-          latitude: 55.7586,
-          longitude: 37.6442,
+          latitude: 61.659078,
+          longitude: 50.794591,
           accuracy: 5,
           timestamp: DateTime.now(),
         ),

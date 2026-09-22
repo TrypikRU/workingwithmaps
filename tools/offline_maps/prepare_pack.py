@@ -10,8 +10,8 @@ import math
 import sqlite3
 from pathlib import Path
 
-REGION = 'moscow-pokrovka-v1'
-SOUTH, NORTH, WEST, EAST = 55.752, 55.767, 37.632, 37.655
+REGION = 'syktyvkar-railway-v1'
+SOUTH, NORTH, WEST, EAST = 61.654, 61.665, 50.786, 50.807
 MAX_PACK = 12 * 1024 * 1024
 MAX_DECODED = 8 * 1024 * 1024
 

@@ -10,6 +10,7 @@ import 'package:workingwithmaps/features/objects/data/drift_objects_data_source.
 import 'package:workingwithmaps/features/objects/data/objects_repository.dart';
 import 'package:workingwithmaps/features/objects/domain/technical_object.dart';
 import 'package:workingwithmaps/features/route/domain/route_snapshot.dart';
+
 import '../../support/dense_map_objects.dart';
 import '../../support/memory_tile_provider.dart';
 import '../../support/test_database.dart';
@@ -71,8 +72,8 @@ void main() {
       });
       expect(objects, hasLength(500));
       final track = [
-        TrackPoint(fix(55.749, 37.619), 'segment'),
-        TrackPoint(fix(55.756, 37.627), 'segment'),
+        TrackPoint(fix(61.649478, 50.769391), 'segment'),
+        TrackPoint(fix(61.656478, 50.777391), 'segment'),
       ];
       Future<void> pump(
         List<TechnicalObject> items,
@@ -87,7 +88,7 @@ void main() {
                 objects: items,
                 location: LocationState(
                   status: LocationStatus.available,
-                  position: fix(latitude, 37.62),
+                  position: fix(latitude, 50.770391),
                 ),
                 track: track,
                 focusObjectId: focused,
@@ -108,7 +109,7 @@ void main() {
           matching: find.byType(MarkerLayer),
         ),
       );
-      await pump(objects!, 55.75);
+      await pump(objects!, 61.650478);
       final original = cluster();
       final originalRendered = renderedLayer().markers;
       final polygons = tester.widget<PolygonLayer>(find.byType(PolygonLayer));
@@ -121,7 +122,7 @@ void main() {
       expect(polygons.polygons, hasLength(500));
       expect(originalRendered.length, lessThan(100));
       for (var i = 1; i <= 20; i++) {
-        await pump(objects, 55.75 + i * 0.00001);
+        await pump(objects, 61.650478 + i * 0.00001);
         expect(cluster(), same(original));
         expect(renderedLayer().markers, same(originalRendered));
         expect(
@@ -136,7 +137,7 @@ void main() {
       }
       await pump(
         List.of(objects),
-        55.75,
+        61.650478,
       ); // Equivalent Drift emission also reuses layers.
       expect(cluster(), same(original));
       final edited = [...objects];
@@ -144,7 +145,7 @@ void main() {
         status: ObjectStatus.visited,
         priority: ObjectPriority.critical,
       );
-      await pump(edited, 55.75);
+      await pump(edited, 61.650478);
       expect(cluster().markers[0], isNot(same(original.markers[0])));
       for (var i = 1; i < 500; i++) {
         expect(cluster().markers[i], same(original.markers[i]));
@@ -177,7 +178,7 @@ void main() {
       expect(controller.camera.zoom, closeTo(zoom + 1, 0.00001));
       // A focus command exposes the selected object even inside a dense cluster,
       // preserving the existing map controller rather than remounting the map.
-      await pump(edited, 55.75, revision: 1, focused: edited.first.id);
+      await pump(edited, 61.650478, revision: 1, focused: edited.first.id);
       expect(
         tester.widget<FlutterMap>(find.byType(FlutterMap)).mapController,
         same(controller),
@@ -197,8 +198,10 @@ void main() {
   ) async {
     final markers = List.generate(
       3,
-      (i) =>
-          Marker(point: const LatLng(55.75, 37.62), child: Text('marker $i')),
+      (i) => Marker(
+        point: const LatLng(61.650478, 50.770391),
+        child: Text('marker $i'),
+      ),
     );
     Marker? chosen;
     await tester.pumpWidget(
@@ -206,7 +209,7 @@ void main() {
         home: Scaffold(
           body: FlutterMap(
             options: const MapOptions(
-              initialCenter: LatLng(55.75, 37.62),
+              initialCenter: LatLng(61.650478, 50.770391),
               initialZoom: 16,
             ),
             children: [

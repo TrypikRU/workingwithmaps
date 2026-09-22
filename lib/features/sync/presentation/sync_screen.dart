@@ -23,9 +23,8 @@ class SyncScreen extends ConsumerWidget {
           .read(syncActionsProvider.notifier)
           .synchronize(retryFailed: retryFailed);
       if (context.mounted && message != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
       }
     }
 
@@ -251,9 +250,8 @@ class _OperationCard extends StatelessWidget {
                   onPressed: () {
                     var details = item.lastError ?? 'Подробности не сохранены';
                     try {
-                      details = const JsonEncoder.withIndent(
-                        '  ',
-                      ).convert(jsonDecode(details));
+                      details = const JsonEncoder.withIndent('  ')
+                          .convert(jsonDecode(details));
                     } catch (_) {
                       /* Legacy errors may be plain text. */
                     }

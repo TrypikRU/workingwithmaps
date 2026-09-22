@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+
 import '../database/app_database.dart';
 import '../utils/app_logger.dart';
 import 'sync_status.dart';

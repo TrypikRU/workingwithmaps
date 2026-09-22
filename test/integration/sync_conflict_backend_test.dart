@@ -10,6 +10,7 @@ import 'package:workingwithmaps/core/utils/local_id.dart';
 import 'package:workingwithmaps/features/objects/data/drift_objects_data_source.dart';
 import 'package:workingwithmaps/features/objects/data/objects_remote_data_source.dart';
 import 'package:workingwithmaps/features/objects/data/objects_repository.dart';
+
 import '../support/test_database.dart';
 
 void main() {
@@ -105,9 +106,8 @@ void main() {
       );
       expect(replay.data!['name'], 'A');
       expect(
-        (await dio.get<Map<String, dynamic>>(
-          'objects/${original.id}',
-        )).data!['name'],
+        (await dio.get<Map<String, dynamic>>('objects/${original.id}'))
+            .data!['name'],
         'C',
       );
     },

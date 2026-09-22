@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/database/database_provider.dart';
 import '../../../core/location/location_controller.dart';
 import '../../../core/location/location_service.dart';

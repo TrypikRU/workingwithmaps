@@ -18,9 +18,8 @@ class ObjectsRefreshButton extends ConsumerWidget {
                   .read(objectsRefreshControllerProvider.notifier)
                   .refresh();
               if (context.mounted && message != null) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(message)));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(message)));
               }
             },
       icon: refreshing

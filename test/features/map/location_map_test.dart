@@ -1,4 +1,5 @@
 import '../../support/test_database.dart';
+
 import 'package:workingwithmaps/core/database/database_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -70,14 +71,14 @@ void main() {
       closeTo(service.current.longitude, 0.00001),
     );
     final oldCenter = controller.camera.center;
-    service.positions.add(fix(latitude: 55.760, accuracy: 3, second: 5));
+    service.positions.add(fix(latitude: 61.660478, accuracy: 3, second: 5));
     await tester.pumpAndSettle();
     expect(find.text('Точность: ±3 м'), findsOneWidget);
     // GPS обновляет маркер, но не отнимает управление камерой у пользователя.
     expect(controller.camera.center, oldCenter);
     await tester.tap(find.byTooltip('Моя позиция'));
     await tester.pumpAndSettle();
-    expect(controller.camera.center.latitude, closeTo(55.760, 0.00001));
+    expect(controller.camera.center.latitude, closeTo(61.660478, 0.00001));
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pumpAndSettle();

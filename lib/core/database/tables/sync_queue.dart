@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+
 import '../../sync/sync_status.dart';
 
 @TableIndex(

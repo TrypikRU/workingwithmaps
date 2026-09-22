@@ -27,14 +27,42 @@ public static class SeedData
         }
         await db.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS OperationReceipts (Key TEXT NOT NULL PRIMARY KEY, RequestJson TEXT NOT NULL, ResponseJson TEXT NOT NULL)");
         var timestamp = DateTimeOffset.UtcNow.UtcTicks / 10 * 10;
+        var demoObjects = new[] {
+                Object("demo-1", "Тепловой пункт № 1", "Сыктывкар, ул. Коммунистическая, 88 (учебный объект)", 61.659078, 50.794591, ObjectStatus.Planned, ObjectPriority.High),
+                Object("demo-2", "Распределительный шкаф № 2", "Сыктывкар, район ЖД вокзала, учебный участок № 2", 61.662278, 50.792891, ObjectStatus.Visited, ObjectPriority.Normal),
+                Object("demo-3", "Насосная станция № 3", "Сыктывкар, район ЖД вокзала, учебный участок № 3", 61.657778, 50.786291, ObjectStatus.Error, ObjectPriority.Critical),
+                Object("demo-4", "Узел связи № 4", "Сыктывкар, район ЖД вокзала, учебный участок № 4", 61.660678, 50.786691, ObjectStatus.Planned, ObjectPriority.Low),
+                Object("demo-5", "Электрощитовая № 5", "Сыктывкар, район ЖД вокзала, учебный участок № 5", 61.663878, 50.799891, ObjectStatus.Visited, ObjectPriority.High)
+        };
         if (!await db.Objects.AnyAsync())
         {
-            db.Objects.AddRange(
-                Object("demo-1", "Тепловой пункт № 1", "Москва, ул. Покровка, 10", 55.7586, 37.6442, ObjectStatus.Planned, ObjectPriority.High),
-                Object("demo-2", "Распределительный шкаф № 2", "Москва, Чистопрудный бульвар, 12", 55.7618, 37.6425, ObjectStatus.Visited, ObjectPriority.Normal),
-                Object("demo-3", "Насосная станция № 3", "Москва, ул. Маросейка, 8", 55.7573, 37.6359, ObjectStatus.Error, ObjectPriority.Critical),
-                Object("demo-4", "Узел связи № 4", "Москва, Архангельский переулок, 7", 55.7602, 37.6363, ObjectStatus.Planned, ObjectPriority.Low),
-                Object("demo-5", "Электрощитовая № 5", "Москва, ул. Жуковского, 4", 55.7634, 37.6495, ObjectStatus.Visited, ObjectPriority.High));
+            db.Objects.AddRange(demoObjects);
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            // Data-only migration of the previous seed. Preserve user edits,
+            // visits, tracks and idempotency receipts; never reset the database.
+            var legacy = new[] {
+                ("demo-1", "Москва, ул. Покровка, 10", 55.7586, 37.6442),
+                ("demo-2", "Москва, Чистопрудный бульвар, 12", 55.7618, 37.6425),
+                ("demo-3", "Москва, ул. Маросейка, 8", 55.7573, 37.6359),
+                ("demo-4", "Москва, Архангельский переулок, 7", 55.7602, 37.6363),
+                ("demo-5", "Москва, ул. Жуковского, 4", 55.7634, 37.6495)
+            };
+            timestamp = Math.Max(timestamp, (await db.Objects.MaxAsync(x => (long?)x.UpdatedAtTicks) ?? 0) + 10);
+            foreach (var (id, address, latitude, longitude) in legacy)
+            {
+                var saved = await db.Objects.FindAsync(id);
+                if (saved is null || saved.Address != address || saved.Latitude != latitude || saved.Longitude != longitude) continue;
+                var replacement = demoObjects.Single(x => x.Id == id);
+                saved.Address = replacement.Address;
+                saved.Latitude = replacement.Latitude;
+                saved.Longitude = replacement.Longitude;
+                // A queued old PATCH must conflict instead of undoing relocation.
+                saved.ServerVersion++;
+                saved.UpdatedAtTicks = timestamp;
+            }
             await db.SaveChangesAsync();
         }
         var today = DateOnly.FromDateTime(DateTime.UtcNow);

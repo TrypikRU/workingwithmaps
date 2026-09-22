@@ -3,8 +3,8 @@ import 'package:workingwithmaps/features/objects/domain/technical_object.dart';
 
 /// Детерминированный плотный район; данные попадают в карту через SQLite.
 List<TechnicalObject> denseMapObjects() => List.generate(500, (index) {
-  final lat = 55.75 + (index ~/ 25) * 0.0002;
-  final lon = 37.62 + (index % 25) * 0.0002;
+  final lat = 61.650478 + (index ~/ 25) * 0.0002;
+  final lon = 50.770391 + (index % 25) * 0.0002;
   return TechnicalObject(
     id: 'dense-$index',
     name: 'Объект ${index.toString().padLeft(3, '0')}',

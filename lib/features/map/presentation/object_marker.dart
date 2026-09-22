@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../objects/domain/technical_object.dart';
 import '../../objects/presentation/object_labels.dart';
 
