@@ -11,7 +11,7 @@ import '../domain/technical_object.dart';
 final objectsRepositoryProvider = Provider<ObjectsRepository>((ref) {
   return ObjectsRepository(
     DriftObjectsDataSource(ref.watch(appDatabaseProvider)),
-    // Dio создаётся только по refresh: неправильная настройка API не мешает cache.
+    // Dio создаётся только при обновлении: неверная настройка API не мешает чтению кэша.
     remote: () => ObjectsRemoteDataSource(ref.read(dioProvider)),
   );
 });

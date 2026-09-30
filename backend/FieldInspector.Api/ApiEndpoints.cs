@@ -75,8 +75,8 @@ public static class ApiEndpoints
             entity.UpdatedAtTicks = gate.NextTimestamp();
             var responseJson = JsonSerializer.Serialize(entity.ToDto(), SyncJson);
             db.OperationReceipts.Add(new OperationReceipt { Key = key, RequestJson = requestJson, ResponseJson = responseJson });
-            // EF SaveChanges commits the versioned entity and durable receipt atomically.
-            // No receipt for 409: explicit resolution must create a NEW operation key.
+            // EF SaveChanges атомарно сохраняет версионируемую сущность и подтверждение операции.
+            // Для 409 подтверждение не создаётся: явное разрешение требует НОВОГО ключа операции.
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateConcurrencyException)
             {
@@ -143,8 +143,8 @@ public static class ApiEndpoints
             visit.UpdatedAtTicks = gate.NextTimestamp();
             visit.ServerVersion++;
             if (created) db.Visits.Add(visit);
-            // Visit and object status share EF's SaveChanges transaction. A later
-            // GET /objects must not undo the mobile app's completed check-in.
+            // Посещение и статус объекта сохраняются одной транзакцией EF SaveChanges. Последующий
+            // GET /objects не должен отменять завершённую отметку о посещении в мобильном приложении.
             if (request.Status == VisitStatus.Completed)
             {
                 var target = await db.Objects.SingleAsync(x => x.Id == request.ObjectId, ct);
@@ -177,7 +177,7 @@ public static class ApiEndpoints
             if (await db.Routes.CountAsync(x => routeIds.Contains(x.Id), ct) != routeIds.Length) return Invalid("Unknown routeId in batch.");
             var ids = points.Select(x => x.Id).ToArray();
             var existing = await db.LocationPoints.Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-            // Сначала валидируем весь batch, затем делаем один commit. Частично
+            // Сначала проверяем весь пакет, затем фиксируем одну транзакцию. Частично
             // принятых пакетов и скрытых дубликатов при повторе не возникает.
             foreach (var point in points)
                 if (existing.TryGetValue(point.Id, out var previous) && !Same(previous, point))

@@ -15,9 +15,9 @@ class RouteRepository {
   final AppDatabase _db;
   final LocationPointFilter filter;
 
-  /// Stable native IDs make commit -> lost ACK -> re-import safe, even after
-  /// the remote sync queue was already acknowledged. Late delivery to a finished
-  /// route is allowed; collection itself was stopped by a native write barrier.
+  /// Постоянные идентификаторы платформы делают повторный импорт после потери подтверждения безопасным,
+  /// даже если сервер уже подтвердил исходящую очередь. Поздняя доставка в завершённый
+  /// обход допустима: сам сбор уже остановлен платформенным барьером записи.
   Future<void> importRecordedPoints(List<RecordedPoint> points) =>
       _db.transaction(() async {
         for (final point in points) {
@@ -101,16 +101,16 @@ class RouteRepository {
         );
   }
 
-  /// Point and outbound operation are atomic. The status check serializes end
-  /// against queued GPS writes; a completed route never accepts a late sample.
+  /// Точка и исходящая операция сохраняются атомарно. Проверка статуса упорядочивает завершение
+  /// и ожидающие записи GPS; завершённый обход не принимает поздние измерения.
   Future<bool> append(
     String routeId,
     String segmentId,
     LocationFix fix, {
     bool Function()? stillActive,
   }) => _db.transaction(() async {
-    // Drift stores DateTime in whole seconds. Filter the same timestamp that
-    // SQLite will persist, so sub-second updates cannot reorder the saved path.
+    // Drift хранит DateTime в целых секундах. Фильтруем то же время, которое будет
+    // сохранено в SQLite: изменения долей секунды не должны менять порядок маршрута.
     fix = LocationFix(
       latitude: fix.latitude,
       longitude: fix.longitude,
@@ -134,7 +134,7 @@ class RouteRepository {
               ..orderBy([(p) => OrderingTerm.desc(p.timestamp)])
               ..limit(1))
             .getSingleOrNull();
-    // Reject stale fixes across restarts too; a new segment only resets geometry.
+    // Отклоняем устаревшие координаты и после перезапуска; новый сегмент сбрасывает только геометрию.
     if (latest != null && !fix.timestamp.isAfter(latest.timestamp)) {
       return false;
     }

@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'offline_map_providers.dart';
 import 'offline_map_repository.dart';
 
-/// Map tile storage не имеет связи с бизнес-БД и SyncEngine. Offline-first
-/// здесь означает local tile → online fallback, а не синхронизацию сущностей.
+/// Хранилище тайлов не связано с бизнес-БД и SyncEngine. Приоритет локальных данных
+/// означает чтение сохранённого тайла с переходом к сети при его отсутствии.
 class OfflineFirstTileProvider extends TileProvider {
   OfflineFirstTileProvider(this.repository, {TileProvider? online})
     : online =

@@ -106,7 +106,7 @@ void main() {
       dio.interceptors.add(
         InterceptorsWrapper(
           onResponse: (response, handler) {
-            // Реальный сервер уже завершил commit. Теряем только ответ на клиенте.
+            // Сервер уже зафиксировал транзакцию. Теряем только ответ на клиенте.
             if (response.requestOptions.path == 'visits' && loseAck) {
               loseAck = false;
               handler.reject(

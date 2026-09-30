@@ -10,7 +10,7 @@ enum NetworkFailureKind {
   other,
 }
 
-/// Ошибка remote-операции не является ошибкой потока локальных данных.
+/// Ошибка удалённой операции не является ошибкой потока локальных данных.
 class NetworkFailure implements Exception {
   const NetworkFailure(this.kind, {this.statusCode});
 

@@ -6,7 +6,7 @@ targets:
           explicit_to_json: true
       drift_dev:
         options:
-          # Снимки схемы нужны для будущих миграций без потери offline-данных.
+          # Снимки схемы нужны для будущих миграций без потери локальных данных.
           databases:
             app_database: lib/core/database/app_database.dart
           schema_dir: drift_schemas/

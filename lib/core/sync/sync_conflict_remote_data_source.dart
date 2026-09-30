@@ -2,8 +2,8 @@ import 'package:dio/dio.dart';
 
 import 'sync_snapshot.dart';
 
-/// Ручное обновление конфликтного snapshot. Ответ сохраняется repository в БД,
-/// и только Drift stream обновляет диагностику; автоматических записей нет.
+/// Ручное обновление снимка конфликта. Репозиторий сохраняет ответ в БД,
+/// и только поток Drift обновляет диагностику; автоматических записей нет.
 class SyncConflictRemoteDataSource {
   SyncConflictRemoteDataSource(this.dio);
   final Dio dio;

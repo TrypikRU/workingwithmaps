@@ -7,8 +7,8 @@ import '../utils/local_id.dart';
 
 class SyncLeaseLost implements Exception {}
 
-/// Cross-isolate/process ownership. Atomic UPSERT elects the writer. Fencing in
-/// every mutation transaction prevents a stale owner from resetting/ACKing rows.
+/// Владение между изолятами и процессами. Атомарный UPSERT выбирает отправителя. Проверка
+/// в каждой изменяющей транзакции запрещает прежнему владельцу сбрасывать или подтверждать строки.
 class SyncLease {
   SyncLease(
     this.database, {
@@ -41,8 +41,8 @@ class SyncLease {
       ) ==
       1;
 
-  /// Runs inside the claim/recovery/ACK/failure transaction. A killed/frozen
-  /// worker loses ownership after two minutes, without requiring a cleanup hook.
+  /// Выполняется внутри транзакции захвата, восстановления, подтверждения или ошибки. Остановленный
+  /// обработчик теряет владение через две минуты без отдельного вызова очистки.
   Future<void> renew() async {
     final changed = await database.customUpdate(
       '''

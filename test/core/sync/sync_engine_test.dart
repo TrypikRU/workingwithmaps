@@ -282,7 +282,10 @@ void main() {
             );
       });
       await engine().run();
-      expect(server.requests, hasLength(1)); // successor cannot overtake retry
+      expect(
+        server.requests,
+        hasLength(1),
+      ); // Следующая операция не может обогнать повтор.
       now = now.add(const Duration(seconds: 5));
       final result = await engine().run();
       expect(result.succeeded, 1);
@@ -296,34 +299,39 @@ void main() {
     },
   );
 
-  test('Crash after queue creation / interrupted claim resumes from SQLite file', () async {
-    await db.close();
-    final directory = await Directory.systemTemp.createTemp('field-sync-');
-    final file = File('${directory.path}/test.sqlite');
-    db = AppDatabase.forTesting(NativeDatabase(file));
-    await enqueue(db, 'one');
-    await db.close(); // no HTTP occurred before process shutdown
-    db = AppDatabase.forTesting(NativeDatabase(file));
-    expect((await engine().run()).succeeded, 1);
-    await enqueue(db, 'two');
-    server.loseNextAck = true;
-    await engine().run();
-    final frozen = await db.select(db.syncQueue).getSingle();
-    // Model process death after server commit but before local acknowledgement.
-    await db
-        .update(db.syncQueue)
-        .write(const SyncQueueCompanion(syncStatus: Value(SyncStatus.syncing)));
-    await db.close();
-    db = AppDatabase.forTesting(NativeDatabase(file));
-    expect((await engine().run()).succeeded, 1);
-    expect(server.keys.last, frozen.operationId);
-    expect(server.applied, 2);
-    expect((await SyncDiagnosticsRepository(db).watch().first).synced, 2);
-    expect(events, contains('sync.recovered'));
-    await db.close();
-    db = createTestDatabase();
-    await directory.delete(recursive: true);
-  });
+  test(
+    'Crash after queue creation / interrupted claim resumes from SQLite file',
+    () async {
+      await db.close();
+      final directory = await Directory.systemTemp.createTemp('field-sync-');
+      final file = File('${directory.path}/test.sqlite');
+      db = AppDatabase.forTesting(NativeDatabase(file));
+      await enqueue(db, 'one');
+      await db.close(); // До остановки процесса HTTP-запросов не было.
+      db = AppDatabase.forTesting(NativeDatabase(file));
+      expect((await engine().run()).succeeded, 1);
+      await enqueue(db, 'two');
+      server.loseNextAck = true;
+      await engine().run();
+      final frozen = await db.select(db.syncQueue).getSingle();
+      // Имитируем завершение процесса после фиксации на сервере, но до локального подтверждения.
+      await db
+          .update(db.syncQueue)
+          .write(
+            const SyncQueueCompanion(syncStatus: Value(SyncStatus.syncing)),
+          );
+      await db.close();
+      db = AppDatabase.forTesting(NativeDatabase(file));
+      expect((await engine().run()).succeeded, 1);
+      expect(server.keys.last, frozen.operationId);
+      expect(server.applied, 2);
+      expect((await SyncDiagnosticsRepository(db).watch().first).synced, 2);
+      expect(events, contains('sync.recovered'));
+      await db.close();
+      db = createTestDatabase();
+      await directory.delete(recursive: true);
+    },
+  );
 
   test(
     'Unsupported legacy operation is retained and cannot block another entity',
@@ -419,7 +427,7 @@ void main() {
       SyncStatus.failed,
     );
     await db.customStatement('DROP TRIGGER reject_ack');
-    // Explicit repair: no payload/key regeneration after a possibly committed POST.
+    // Явное восстановление: данные и ключ не пересоздаются после возможно зафиксированного POST.
     await db
         .update(db.syncQueue)
         .write(const SyncQueueCompanion(syncStatus: Value(SyncStatus.pending)));

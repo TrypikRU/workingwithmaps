@@ -47,8 +47,8 @@ void main() {
         );
         try {
           await insertLegacy(db);
-          // Simulate a server refresh before the app upgrade: API updates the
-          // coordinates but currently has no polygon field.
+          // Имитируем обновление с сервера до обновления приложения: API меняет
+          // координаты, но пока не передаёт поле polygon.
           final destination = demoObjects.first;
           await (db.update(
             db.technicalObjects,

@@ -20,9 +20,9 @@ import '../../support/sync_server.dart';
 AppDatabase openFile(String path, {bool concurrent = false}) {
   final previous = driftRuntimeOptions.dontWarnAboutMultipleDatabases;
   try {
-    // These tests deliberately emulate separate UI/worker connections in one
-    // isolate. Each owns a NEW executor; no QueryExecutor is shared. Silence
-    // Drift's class-instance heuristic only while constructing that connection.
+    // Тесты намеренно имитируют отдельные подключения интерфейса и фонового обработчика в одном
+    // изоляте. У каждого НОВЫЙ исполнитель, общего QueryExecutor нет. Отключаем эвристику
+    // экземпляров Drift только на время создания такого подключения.
     if (concurrent) driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     return AppDatabase.forTesting(
       NativeDatabase(File(path)),

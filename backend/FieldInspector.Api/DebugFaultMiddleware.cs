@@ -27,7 +27,7 @@ public sealed class DebugFaultMiddleware(RequestDelegate next, IWebHostEnvironme
         }
         try
         {
-            // Timeout — действительно отсутствие ответа, а не HTTP 408.
+            // Превышение времени ожидания — действительное отсутствие ответа, а не HTTP 408.
             // Отмена клиента освобождает ожидание и не запускает запись данных.
             if (mode == "timeout")
             {
@@ -46,7 +46,7 @@ public sealed class DebugFaultMiddleware(RequestDelegate next, IWebHostEnvironme
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            // Ожидаемое завершение искусственного timeout/delay, не ошибка сервера.
+            // Ожидаемое завершение искусственного ожидания или задержки, не ошибка сервера.
         }
     }
 }

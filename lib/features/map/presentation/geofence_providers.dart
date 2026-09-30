@@ -6,8 +6,8 @@ import '../../../core/location/location_controller.dart';
 import '../../../core/location/location_state.dart';
 import '../../objects/presentation/objects_providers.dart';
 
-/// Informational zones only. Missing/unreliable GPS is unknown (empty map), not
-/// outside. This provider never creates visits or changes Check-in eligibility.
+/// Только информационные зоны. При отсутствии достоверного GPS состояние неизвестно: пустая карта,
+/// а не нахождение снаружи. Провайдер не создаёт посещения и не меняет доступность отметки.
 final objectGeofencesProvider = Provider<Map<String, GeofenceState>>((ref) {
   final location = ref.watch(locationControllerProvider);
   final fix = location.position;

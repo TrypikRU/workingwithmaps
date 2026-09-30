@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 
-# A new commit replaces an obsolete run for the same PR/branch.
+# Новый коммит заменяет устаревший запуск для того же запроса на слияние или ветки.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -30,7 +30,7 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # Keep CI aligned with the Flutter/Dart SDK used locally.
+      # Версии Flutter/Dart SDK в CI должны совпадать с локальными.
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.5'
@@ -43,8 +43,8 @@ jobs:
       - name: Check Dart formatting
         run: dart format --set-exit-if-changed .
 
-      # Rebuild generated models/serialization/SQL before analysis and tests.
-      # Historical drift_schemas snapshots are committed migration inputs.
+      # Перед анализом и тестами заново генерируем модели, сериализацию и SQL.
+      # Сохранённые снимки drift_schemas служат исходными данными миграций.
       - name: Generate Freezed, JSON and Drift code
         run: dart run build_runner build
 
@@ -56,7 +56,7 @@ jobs:
 
       - name: Build debug APK
         run: |
-          # Keep Gradle within the hosted runner's memory budget.
+          # Ограничиваем память Gradle с учётом ресурсов среды CI.
           mkdir -p "$HOME/.gradle"
           printf '%s\n' 'org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -XX:ReservedCodeCacheSize=256m' >> "$HOME/.gradle/gradle.properties"
           flutter build apk --debug
@@ -88,8 +88,8 @@ jobs:
       - name: Build backend
         run: dotnet build FieldInspector.Api --configuration Release --no-restore
 
-      # The backend's test suite is an HTTP smoke script, not an empty dotnet
-      # test invocation against a Web SDK project. Each run gets a fresh SQLite.
+      # Сервер проверяется скриптом HTTP smoke-тестов, а не пустым запуском dotnet test.
+      # Для каждой проверки проекта Web SDK создаётся новая база SQLite.
       - name: Test backend endpoints and sync failures
         shell: bash
         env:

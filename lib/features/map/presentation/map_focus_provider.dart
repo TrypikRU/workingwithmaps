@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Команда фокуса отделена от MapController, lifecycle которого принадлежит
-/// виджету. Revision позволяет повторно показать тот же объект после сдвига карты.
+/// Команда фокуса отделена от MapController, жизненным циклом которого управляет
+/// виджет. Номер изменения позволяет повторно показать объект после сдвига карты.
 class MapFocusController extends Notifier<({String? objectId, int revision})> {
   @override
   ({String? objectId, int revision}) build() => (objectId: null, revision: 0);

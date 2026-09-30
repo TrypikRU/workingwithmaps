@@ -5,7 +5,7 @@ import 'package:drift/drift.dart';
 import '../geometry/geo_point.dart';
 import '../geometry/polygon.dart';
 
-/// Empty ring means no polygon; actual rings are validated on persistence.
+/// Пустой контур означает отсутствие полигона; непустые контуры проверяются при сохранении.
 class PolygonConverter extends TypeConverter<List<GeoPoint>, String> {
   const PolygonConverter();
   @override

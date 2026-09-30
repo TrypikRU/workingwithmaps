@@ -16,7 +16,7 @@ function Request([string]$path, [string]$method = 'GET', $body = $null, [int]$ex
     }
 }
 
-# Unique client IDs allow reruns without deleting data. Use a dedicated test DB.
+# Уникальные клиентские идентификаторы позволяют повторять проверку без удаления данных. Используйте отдельную тестовую БД.
 $suffix = [guid]::NewGuid().ToString('N')
 $objects = @(Request '/objects')
 $routes = @(Request '/routes/today')
@@ -37,8 +37,8 @@ Assert ($conflicted.current.serverVersion -eq 1 -and $conflicted.current.status 
 $visit.status = 'completed'
 $null = Request '/visits' 'POST' $visit
 
-# Acknowledged and conflicting PATCH, replay after another client's change,
-# and rejecting reuse of an idempotency key with a different payload.
+# Проверяем успешный и конфликтующий PATCH, повтор после изменения другим клиентом
+# и запрет повторного использования ключа идемпотентности с другими данными.
 $current = (@(Request '/objects') | Where-Object id -eq $objects[0].id)
 $patch = @{ id = $current.id; name = 'Smoke object'; address = $current.address;
     latitude = $current.latitude; longitude = $current.longitude; status = $current.status;

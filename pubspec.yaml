@@ -1,5 +1,5 @@
 name: workingwithmaps
-description: "Field Inspector / Field Route — offline-first Android application."
+description: "Полевой инспектор — Android-приложение для обходов с поддержкой работы без интернета."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -8,10 +8,10 @@ environment:
   flutter: '>=3.47.5'
 
 dependencies:
-  # go_router 18 pulls in cupertino_ui, whose reachable icons need this font.
+  # go_router 18 подключает cupertino_ui, значкам которого нужен этот шрифт.
   cupertino_icons: ^1.0.9
   dio: ^5.11.1
-  # Keep runtime and generator aligned: newer patches change the preview API.
+  # Версии библиотеки и генератора должны совпадать: новые исправления меняют предварительный API.
   drift: 2.35.0
   drift_flutter: ^0.3.1
   flutter:

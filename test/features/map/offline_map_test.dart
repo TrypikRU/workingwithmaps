@@ -148,7 +148,7 @@ void main() {
           );
           await restarted.load();
           expect(restarted.pack!.tiles, hasLength(40));
-          // Existing package can be replaced on Windows without deleting it first.
+          // Существующий пакет можно заменить в Windows без предварительного удаления.
           transport.data = utf8.encode(jsonEncode(manifest()));
           await restarted.download(url, (_) {});
           final online = CountingOnline(png);
@@ -179,10 +179,7 @@ void main() {
             options,
             Future.value(),
           );
-          expect(
-            online.requests,
-            1,
-          ); // Missing tile must not contact network in forced offline mode.
+          expect(online.requests, 1); // Отсутствующий тайл не должен обращаться к сети в принудительном офлайн-режиме.
           final count = transport.requests;
           await expectLater(
             repo.download(

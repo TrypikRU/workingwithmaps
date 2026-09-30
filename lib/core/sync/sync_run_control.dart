@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-/// Cooperative cancellation; durable lease recovery also covers sudden kill.
+/// Согласованная отмена; восстановление сохранённой блокировки учитывает и внезапное завершение.
 class SyncRunControl {
   final token = CancelToken();
   bool get cancelled => token.isCancelled;

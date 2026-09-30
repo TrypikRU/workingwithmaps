@@ -1,135 +1,160 @@
-# Android WorkManager synchronization
+# Синхронизация через Android WorkManager
 
 ## Две разные задачи
 
-| Механизм | Назначение | Владелец работы |
+| Механизм | Назначение | Исполнитель |
 | --- | --- | --- |
-| Kotlin Foreground Service | Непрерывный сбор GPS, в том числе при выключенном экране; постоянное уведомление | LocationTrackingService + FusedLocationProviderClient + native SQLite inbox |
-| Flutter WorkManager | Отложенная отправка существующих pending/retry операций при подходящих условиях | Headless Flutter engine → Drift → тот же SyncEngine |
+| Foreground Service на Kotlin | Сбор GPS, включая выключенный экран; постоянное уведомление | LocationTrackingService, FusedLocationProviderClient, отдельная входящая очередь SQLite |
+| Flutter WorkManager | Отложенная отправка ожидающих операций при подходящих условиях | Движок Flutter без интерфейса → Drift → общий SyncEngine |
 
-WorkManager **не** запускает GPS, не подписывается на location updates и не вызывает
-tracking MethodChannel. Нет второго алгоритма синхронизации. UI и worker создают
-SyncProcessor/SyncEngine с общей Dio-конфигурацией `createApiDio()`.
-Точки native inbox пока импортирует существующий NativeTrackImporter при доступном
-Flutter UI. Worker отправляет уже попавшие в Drift sync_queue операции; он не переносит
-ещё не импортированный native inbox. Это граница текущей архитектуры записи трека.
+WorkManager не запускает GPS, не подписывается на координаты и не вызывает
+MethodChannel записи маршрута. Второго алгоритма синхронизации нет.
+Интерфейс и фоновый обработчик создают SyncProcessor/SyncEngine с общей
+конфигурацией Dio через createApiDio().
+
+Платформенную очередь импортирует NativeTrackImporter при доступном Flutter.
+WorkManager отправляет только операции, уже попавшие в sync_queue Drift.
+Неимпортированные точки он не переносит — это ограничение текущей архитектуры.
 
 ## Регистрация и выполнение
 
-`main()` неблокирующе вызывает `initializeBackgroundSync()`. Планируется одна задача
-`field-inspector-periodic-sync`, taskName `field_inspector.sync.v1`, tag `field-inspector-sync`.
-ExistingPeriodicWorkPolicy.keep сохраняет существующее расписание при каждом запуске app:
-перезапуск приложения не отменяет выполняющийся worker и не сбрасывает его backoff.
+main() неблокирующе вызывает initializeBackgroundSync(). Планируется одна задача:
 
-Constraints: `NetworkType.connected`, `requiresBatteryNotLow: true`.
-Wi-Fi не обязателен: подходит и мобильная сеть. Подключение не гарантирует доступность
-API — Dio/SyncEngine по-прежнему обрабатывают offline, timeout и HTTP ошибки.
-Период 15 минут — минимальный интервал, **не обещание запуска ровно каждые 15 минут**.
-Android учитывает Doze, ограничения батареи, сеть и собственное планирование.
-Ни expedited work, ни foreground dataSync service, ни GPS permissions worker не нужны.
+- имя: field-inspector-periodic-sync;
+- taskName: field_inspector.sync.v1;
+- tag: field-inspector-sync.
 
-Top-level `syncCallbackDispatcher`, сохранённый через `@pragma('vm:entry-point')`,
-инициализирует Flutter binding и обработчик Workmanager. Android FlutterEngine регистрирует
-плагины автоматически. Worker не использует ProviderScope/Activity и сам создаёт:
-1. AppDatabase — тот же `field_inspector.sqlite` в application documents directory.
-2. Dio — тот же `API_BASE_URL` из dart-define (по умолчанию emulator host 10.0.2.2:5080).
-3. SyncProcessor и SyncEngine; открытие БД/миграции происходит при первом запросе.
+ExistingPeriodicWorkPolicy.keep сохраняет расписание при каждом открытии
+приложения: перезапуск не отменяет текущую задачу и не сбрасывает её задержку.
 
-После `run()` worker возвращает true, если нет работы для автоматического повтора;
-false означает Android Result.retry(). Dio закрывается и DB connection закрывается
-в finally, включая ошибки. Есть callback onTaskStopped, отменяющий текущий Dio-запрос.
-Android может уничтожить engine до завершения finally — тогда работают durable claims
-и истечение lease, а не предположение о гарантированном cleanup.
+Условия: NetworkType.connected и requiresBatteryNotLow: true.
+Подходит мобильная сеть, Wi-Fi не обязателен. Подключение не гарантирует доступ
+к API: Dio/SyncEngine обрабатывают отсутствие сети, превышение времени и HTTP-ошибки.
+Период 15 минут — минимальный интервал, а не точное расписание.
+Android учитывает Doze, батарею, сеть и собственное планирование.
+Обработчику не нужны ускоренный запуск, сервис dataSync или разрешения GPS.
 
-## Retry и ограничение времени
+Функция верхнего уровня syncCallbackDispatcher сохраняется через
+@pragma('vm:entry-point'), инициализирует Flutter binding и обработчик Workmanager.
+FlutterEngine Android автоматически регистрирует плагины.
+ProviderScope и Activity не используются. Обработчик создаёт:
 
-На уровне операции остаётся RetryPolicy SyncEngine: 5, 10, 20… секунд, максимум 15 минут.
-attemptCount/lastError/nextRetryAt сохраняются в SQLite. Worker **не сбрасывает** nextRetryAt
-и не использует `retryFailed: true`. Его false применяется также к pending очереди с будущим
-retryAt, занятости lease или прерыванию прохода. WorkManager использует свой exponential
-backoff от 30 секунд (Android ограничивает его 5 часами), повторно проверяя constraints.
-Фактический запуск должен удовлетворить обоим уровням backoff; при открытом приложении
-foreground timer может обработать due-очередь раньше фонового расписания.
+1. AppDatabase — тот же field_inspector.sqlite в каталоге документов приложения.
+2. Dio — тот же API_BASE_URL из dart-define; по умолчанию 10.0.2.2:5080.
+3. SyncProcessor и SyncEngine; БД открывается и мигрирует при первом запросе.
 
-409 и остальные permanent 4xx остаются failed и видны в диагностике. Если только такие
-операции остались, worker возвращает true: он не повторяет конфликт бесконечно. Последующие
-ревизии той же сущности не обгоняют её конфликт. Ручная кнопка повтора сохраняет прежнее поведение.
+После run() значение true означает отсутствие работы для автоматического повтора;
+false соответствует Android Result.retry(). Dio и подключение БД закрываются
+в finally, в том числе при ошибке. onTaskStopped отменяет текущий запрос Dio.
+Android может уничтожить движок до finally: тогда помогают сохранённые захваты
+и истечение блокировки, а не предположение об обязательной очистке.
 
-Один проход SyncEngine ограничен watermark очереди и четырьмя минутами; deadline
-отменяет HTTP, оставляет claim/payload для следующего запуска и возвращает deferred.
-Большой backlog отправляется несколькими проходами. Нормальные Dio connect/send/receive
-timeouts сохранены. При потере сети/OS остановке можно не получить ответ после server commit:
-повтор использует тот же operationId, payload и idempotency key.
+## Повторы и ограничение времени
 
-## Одновременный UI и worker
+RetryPolicy SyncEngine сохраняет задержки 5, 10, 20… секунд, максимум 15 минут.
+attemptCount, lastError и nextRetryAt находятся в SQLite.
+Обработчик не сбрасывает nextRetryAt и не использует retryFailed: true.
+Он возвращает false также при ожидающей очереди с будущим сроком, занятой
+блокировке или прерванном проходе.
 
-Static single-flight работает только внутри одного Dart isolate. Между engines действует
-`SyncLease`: атомарный SQLite UPSERT строки `app_metadata['sync.engine_lease']` с UUID владельца
-и expiresAt. Пока lease занят, второй engine возвращает deferred **до recover и HTTP**.
-Транзакции recovery, manual retry, claim, ACK и failure проверяют владельца и продлевают lease
-на две минуты. Release удаляет только собственную строку. Schema v4 не меняется.
+WorkManager применяет свою экспоненциальную задержку от 30 секунд до ограничения
+Android в 5 часов и повторно проверяет условия. Запуск должен удовлетворять
+обоим уровням задержек. Таймер открытого приложения может обработать созревшую
+очередь раньше фонового расписания.
 
-Если worker погиб/заморожен, lease истекает. Новый owner восстанавливает syncing claim с
-тем же замороженным запросом. Старый worker после истечения не сможет ACK/reset/fail чужую
-очередь: fencing проверяется в той же транзакции, что изменение. При экстремально долгом
-сетевом запросе возможен повтор HTTP после передачи lease; от повторного применения на
-сервере защищает уже реализованная серверная идемпотентность. Lease не заменяет её.
+409 и остальные постоянные 4xx остаются failed и видны в диагностике.
+Если остались только они, возвращается true: бесконечного повтора конфликта нет.
+Следующие версии той же сущности не обгоняют конфликт. Ручной повтор сохраняет
+свои правила.
 
-У каждого engine своё SQLite connection. `shareAcrossIsolates` не решает обнаружение
-другого независимого FlutterEngine. UI при resume и каждые 2 секунды пока открыт проверяет
-`PRAGMA data_version`: чужой commit инвалидирует Drift streams. Так карта, список,
-счётчики и индикатор активной синхронизации обновляются после работы worker без HTTP из UI.
-SQLite busy_timeout=5с сглаживает краткие блокировки локальных транзакций. Ошибки открытия/
-SQLite-инфраструктуры приводят к retry worker, сохранённые данные не удаляются.
+Проход ограничен максимальным идентификатором очереди на старте и четырьмя минутами.
+Истечение срока отменяет HTTP, оставляет захват и запрос на следующий запуск
+и возвращает deferred. Большая очередь отправляется несколькими проходами.
+Обычные ограничения Dio на соединение, отправку и получение сохраняются.
+Сеть или ОС могут прервать запрос после фиксации на сервере; повтор использует
+прежние operationId, payload и ключ идемпотентности.
+
+## Одновременная работа интерфейса и фоновой задачи
+
+Объединение запусков действует внутри одного изолята Dart.
+Между движками работает SyncLease: атомарный UPSERT строки
+app_metadata['sync.engine_lease'] с UUID владельца и expiresAt.
+Пока блокировка занята, другой движок возвращает deferred до восстановления и HTTP.
+
+Транзакции восстановления, ручного повтора, захвата, подтверждения и ошибки
+проверяют владельца и продлевают блокировку на две минуты.
+Освобождение удаляет только собственную строку. Схема v4 не меняется.
+
+Если обработчик завершён или заморожен, блокировка истекает. Новый владелец
+восстанавливает syncing с прежним запросом. Старый владелец не может подтвердить,
+сбросить или пометить ошибкой чужую очередь: проверка владения выполняется в
+той же транзакции, что изменение. При очень долгом HTTP возможен повтор после
+смены владельца; от повторного применения защищает серверная идемпотентность.
+
+У каждого движка отдельное подключение SQLite. shareAcrossIsolates не обнаруживает
+независимый FlutterEngine. При возвращении в приложение и каждые 2 секунды,
+пока оно открыто, проверяется PRAGMA data_version. Внешняя фиксация обновляет
+потоки Drift: карту, список, счётчики и активность без HTTP из интерфейса.
+
+SQLite busy_timeout=5с сглаживает краткие блокировки транзакций.
+Ошибки открытия БД или инфраструктуры SQLite приводят к повтору фоновой задачи;
+сохранённые данные не удаляются.
 
 ## Перезапуск и ограничения
 
-WorkManager хранит расписание в собственной SQLite и восстанавливает его после перезагрузки
-устройства. Manifest включает ACCESS_NETWORK_STATE и RECEIVE_BOOT_COMPLETED, служебные
-receiver/service/initializer приходят из WorkManager manifest merge. Собственного boot receiver
-и запуска LocationTrackingService при boot нет. Регистрация выполняется при первом открытии app.
+WorkManager хранит расписание в SQLite и восстанавливает его после перезагрузки
+устройства. Манифест включает ACCESS_NETWORK_STATE и RECEIVE_BOOT_COMPLETED.
+Служебные получатели, сервисы и инициализатор подключаются при объединении
+манифестов WorkManager. Собственного обработчика загрузки и автозапуска
+LocationTrackingService нет. Регистрация происходит при первом открытии приложения.
 
-После обычного закрытия UI работа может выполняться без Activity. Force-stop, Android Stop,
-ограничения OEM или отозванные фоновые возможности могут остановить/отложить её. Для проверки
-после force-stop сначала снова откройте app. KEEP предотвращает размножение расписаний.
-Удаление приложения/очистка данных удаляют и очередь, и расписание.
+После обычного закрытия интерфейса задача может выполняться без Activity.
+Принудительная остановка, системная кнопка остановки, ограничения производителя
+или отозванные фоновые возможности могут остановить либо отложить её.
+После принудительной остановки снова откройте приложение перед проверкой.
+Политика KEEP предотвращает дублирование расписаний.
+Удаление приложения и очистка данных удаляют очередь и расписание.
 
-Основания:
-[Android persistent work](https://developer.android.com/develop/background-work/background-tasks/persistent),
-[constraints и backoff](https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work),
-[Drift engines и streams](https://drift.simonbinder.eu/isolates/),
-[Workmanager task results](https://docs.page/fluttercommunity/flutter_workmanager/task-status).
+Документация:
+[постоянная фоновая работа Android](https://developer.android.com/develop/background-work/background-tasks/persistent),
+[условия и задержки повторов](https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work),
+[движки и потоки Drift](https://drift.simonbinder.eu/isolates/),
+[результаты задач Workmanager](https://docs.page/fluttercommunity/flutter_workmanager/task-status).
 
-## Логи и проверка
+## Журнал и проверка
 
-Общий AppLogger получает события worker.start, worker.complete, worker.error,
-worker.stopped, worker.disposed и события самого SyncEngine, включая sync.run.deferred.
-В worker logger выводит структурированный JSON с префиксом FieldSyncWorker в Flutter Logcat.
-Есть elapsedMs, succeeded/failed/retry и причина остановки. Payload, координаты и headers не логируются.
+AppLogger получает worker.start, worker.complete, worker.error, worker.stopped,
+worker.disposed и события SyncEngine, включая sync.run.deferred.
+В фоне структурированный JSON выводится с техническим префиксом FieldSyncWorker
+в Flutter Logcat. Доступны elapsedMs, succeeded/failed/retry и причина остановки.
+Координаты, данные запросов и заголовки не записываются.
 
-```powershell
+~~~powershell
 flutter analyze
 flutter test
 flutter build apk --debug
 adb logcat -s flutter:I WM-WorkerWrapper:D WM-SystemJobService:D
 adb shell dumpsys jobscheduler com.klochkov.workingwithmaps
 adb shell dumpsys package com.klochkov.workingwithmaps
-```
+~~~
 
-Полевой сценарий: открыть приложение один раз для регистрации; отключить сеть, сделать
-Check-in, свернуть приложение. Включить сеть, дождаться worker (или запустить конкретный
-JobScheduler job для debug), проверить worker.complete в Logcat. Открыть UI: очередь уменьшилась,
-visit synced. Повторить с backend debug HTTP500/409 и при одновременно открытой диагностике.
+Ручной сценарий: открыть приложение для регистрации, отключить сеть, отметить
+посещение и свернуть приложение. Включить сеть, дождаться задачи либо запустить
+конкретное задание JobScheduler при отладке. Проверить worker.complete в Logcat.
+При открытии приложения очередь должна уменьшиться, а посещение — синхронизироваться.
+Повторить с искусственными HTTP 500/409 и одновременно открытой диагностикой.
 
-```powershell
-# Найдите реальный JOB_ID компонента androidx.work.impl.background.systemjob.SystemJobService
-# в dumpsys jobscheduler. -f применяется только для отладки, обходя constraints:
+~~~powershell
+# Найдите JOB_ID компонента androidx.work.impl.background.systemjob.SystemJobService
+# в dumpsys jobscheduler. Флаг -f предназначен для отладки и обходит условия:
 adb shell cmd jobscheduler run -f com.klochkov.workingwithmaps <JOB_ID>
-```
+~~~
 
-На emulator backend должен быть доступен через 10.0.2.2; физическому устройству нужен
-доступный адрес сервера в API_BASE_URL. Для reboot-теста перезагрузите тестовое устройство
-после регистрации и проверьте восстановленную задачу при подходящих constraints.
-Unit/integration tests используют настоящую файловую SQLite, отдельный Dart isolate,
-подменённый Dio transport: успех, offline/500/409/timeout, fencing, cancellation,
-восстановление claim и обновление streams при внешней записи.
+Сервер доступен эмулятору через 10.0.2.2; устройству нужен доступный API_BASE_URL.
+Для проверки перезагрузки сначала зарегистрируйте задачу, перезагрузите устройство
+и проверьте её восстановление при подходящих условиях.
+
+Модульные и интеграционные тесты используют настоящую файловую SQLite,
+отдельный изолят Dart и подмену транспорта Dio. Проверяются успех, отсутствие сети,
+500/409, превышение времени, владение блокировкой, отмена, восстановление захвата
+и обновление потоков после внешней записи.

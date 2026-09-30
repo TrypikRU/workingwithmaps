@@ -4,8 +4,8 @@ import '../database/app_database.dart';
 import '../utils/app_logger.dart';
 import 'sync_status.dart';
 
-/// Вызывается внутри транзакции изменения объекта. Только неотправленный tail
-/// можно заменить: timeout/claim означает, что сервер уже мог принять запрос.
+/// Вызывается внутри транзакции изменения объекта. Только неотправленный хвост
+/// можно заменить: превышение времени или захват означает, что сервер уже мог принять запрос.
 Future<void> enqueueObjectUpdate(
   AppDatabase db,
   String id,
@@ -19,7 +19,7 @@ Future<void> enqueueObjectUpdate(
             ..orderBy([(q) => OrderingTerm.desc(q.id)]))
           .get();
   // Объединяем только непрерывный хвост этой сущности. Иначе новая правка
-  // могла бы переместиться перед delete или уже замороженным запросом.
+  // могла бы переместиться перед удалением или уже зафиксированным запросом.
   final unsent = queued
       .takeWhile(
         (q) =>
@@ -33,8 +33,8 @@ Future<void> enqueueObjectUpdate(
       .reversed
       .toList();
   if (unsent.isNotEmpty) {
-    // Сохраняем старший queue id: watermark уже запущенного engine не теряет
-    // выбранную операцию. Актуальное состояние будет заморожено при claim.
+    // Сохраняем прежний идентификатор очереди, чтобы граница запущенного прохода не исключила
+    // выбранную операцию. Актуальное состояние фиксируется при захвате.
     for (final duplicate in unsent.skip(1)) {
       await (db.delete(
         db.syncQueue,

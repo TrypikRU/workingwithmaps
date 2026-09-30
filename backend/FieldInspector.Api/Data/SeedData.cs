@@ -8,11 +8,11 @@ public static class SeedData
 {
     public static async Task Initialize(InspectorDbContext db, SyncGate gate)
     {
-        // EnsureCreated достаточно для одноразового локального test backend.
+        // EnsureCreated достаточно для одноразового локального тестового сервера.
         // База Flutter никогда не открывается этим процессом.
         await db.Database.EnsureCreatedAsync();
         await using var transaction = await db.Database.BeginTransactionAsync();
-        // Маленькая additive migration для уже существующих pet-баз. EnsureCreated
+        // Небольшая дополняющая миграция для существующих учебных баз. EnsureCreated
         // не обновляет таблицы. Проверка схемы и ALTER выполняются без удаления данных.
         var connection = db.Database.GetDbConnection();
         await using (var command = connection.CreateCommand())
@@ -41,8 +41,8 @@ public static class SeedData
         }
         else
         {
-            // Data-only migration of the previous seed. Preserve user edits,
-            // visits, tracks and idempotency receipts; never reset the database.
+            // Миграция прежних начальных данных. Сохраняем пользовательские правки,
+            // посещения, маршруты и подтверждения идемпотентности; базу не очищаем.
             var legacy = new[] {
                 ("demo-1", "Москва, ул. Покровка, 10", 55.7586, 37.6442),
                 ("demo-2", "Москва, Чистопрудный бульвар, 12", 55.7618, 37.6425),
@@ -59,7 +59,7 @@ public static class SeedData
                 saved.Address = replacement.Address;
                 saved.Latitude = replacement.Latitude;
                 saved.Longitude = replacement.Longitude;
-                // A queued old PATCH must conflict instead of undoing relocation.
+                // Старый PATCH из очереди должен вызвать конфликт, а не отменить перенос координат.
                 saved.ServerVersion++;
                 saved.UpdatedAtTicks = timestamp;
             }
@@ -74,7 +74,7 @@ public static class SeedData
             await db.SaveChangesAsync();
         }
         await transaction.CommitAsync();
-        // Восстанавливаем high-water mark из диска после перезапуска API.
+        // Восстанавливаем последнюю зафиксированную отметку времени с диска после перезапуска API.
         foreach (var latest in new[] {
             await db.Objects.MaxAsync(x => (long?)x.UpdatedAtTicks),
             await db.Routes.MaxAsync(x => (long?)x.UpdatedAtTicks),

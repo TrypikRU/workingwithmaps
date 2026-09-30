@@ -12,8 +12,8 @@ import 'sync_status.dart';
 import 'sync_lease.dart';
 import 'sync_snapshot.dart';
 
-/// Обработка одной операции: durable claim → HTTP без SQL lock → atomic ACK.
-/// Ни DTO Drift, ни Dio не выходят в UI. Engine отвечает только за порядок запусков.
+/// Обработка одной операции: сохранённый захват → HTTP без блокировки SQL → атомарное подтверждение.
+/// Ни DTO Drift, ни Dio не выходят в интерфейс. Движок отвечает только за порядок запусков.
 class SyncProcessor {
   SyncProcessor(
     this.database, {
@@ -29,8 +29,8 @@ class SyncProcessor {
   final DateTime Function() clock;
   Future<void> Function()? verifyOwnership;
 
-  /// Explicit user retry preserves the request identity and previous diagnostics.
-  /// Called only inside the engine's process-wide single-flight section.
+  /// Явный повтор пользователя сохраняет идентичность запроса и прежнюю диагностику.
+  /// Вызывается только внутри общей для процесса секции единственного запуска движка.
   Future<void> retryFailed() => database.transaction(() async {
     await verifyOwnership?.call();
     final failed = await (database.select(
@@ -38,11 +38,11 @@ class SyncProcessor {
     )..where((q) => q.syncStatus.equalsValue(SyncStatus.failed))).get();
     for (final item in failed) {
       // 409 требует решения человека. «Повторить ошибочные» не является
-      // согласием перезаписать запись, даже для legacy ошибок без snapshot.
+      // согласием перезаписать запись, даже для старых ошибок без снимка данных.
       try {
         if (jsonDecode(item.lastError ?? '{}')['kind'] == 'conflict') continue;
       } catch (_) {
-        /* Legacy lastError may be plain text. */
+        /* Старое значение lastError может содержать обычный текст. */
       }
       await (database.update(
         database.syncQueue,
@@ -106,9 +106,9 @@ class SyncProcessor {
             : {
                 'points': [payload],
               },
-        // Backend deduplicates by stable entity ID + identical payload. This key
-        // also identifies one frozen operation in logs; it is NOT a substitute
-        // for server-side deduplication and never changes on retries.
+        // Сервер исключает дубликаты по постоянному идентификатору сущности и одинаковым данным. Ключ
+        // также обозначает зафиксированную операцию в журнале, но не заменяет
+        // серверную защиту от дубликатов и никогда не меняется при повторах.
         options: Options(
           method: item.entityType == 'object' ? 'PATCH' : 'POST',
           headers: {'Idempotency-Key': claimed.operationId},
@@ -154,8 +154,8 @@ class SyncProcessor {
           : error is DioException
           ? SyncException.fromDio(error)
           : const SyncException(SyncErrorKind.local, 'Local processing failed');
-      // Если сам SQLite недоступен, оставляем durable claim как syncing. При
-      // следующем запуске recover повторит тот же запрос; остальные строки целы.
+      // Если SQLite недоступна, оставляем сохранённый захват в syncing. При
+      // следующем запуске восстановление повторит тот же запрос; остальные строки целы.
       await _fail(
         item,
         failure,
@@ -175,8 +175,8 @@ class SyncProcessor {
   Future<SyncQueueData> _claim(SyncQueueData item) => database.transaction(
     () async {
       await verifyOwnership?.call();
-      // A repository may coalesce B into the selected, still-unsent A between
-      // queued() and claim. Read again under the transaction before freezing.
+      // Репозиторий может объединить B с выбранной, ещё не отправленной A между
+      // queued() и захватом. Перед фиксацией повторно читаем запись внутри транзакции.
       item = await (database.select(
         database.syncQueue,
       )..where((q) => q.id.equals(item.id))).getSingle();
@@ -318,8 +318,8 @@ class SyncProcessor {
         ),
       );
     } else if (item.entityType == 'visit') {
-      // Не копируем remote бизнес-поля поверх более свежей локальной правки.
-      // Следующая операция получит эту serverVersion при создании своего snapshot.
+      // Не копируем серверные бизнес-поля поверх более свежей локальной правки.
+      // Следующая операция получит эту serverVersion при создании своего снимка.
       await (database.update(
         database.visits,
       )..where((v) => v.id.equals(item.entityId))).write(
@@ -331,7 +331,7 @@ class SyncProcessor {
     } else {
       await _entityStatus(item, status);
     }
-    // Diagnostic counters are part of ACK: a rollback cannot report success.
+    // Счётчики диагностики входят в подтверждение: откат не может показать успех.
     final now = clock().toUtc();
     final countRow = await (database.select(
       database.appMetadata,

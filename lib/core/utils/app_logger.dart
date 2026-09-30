@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-/// Общий структурированный logger. Не пишет координаты, payload и HTTP headers.
-/// Sink подменяется тестом или будущим файловым логированием без изменения engine.
+/// Общий структурированный журнал. Не записывает координаты, данные запросов и HTTP-заголовки.
+/// Получатель записей заменяется тестом или файловым журналом без изменения движка.
 class AppLogger {
   const AppLogger({this.sink});
   final void Function(String event, Map<String, Object?> fields)? sink;
@@ -14,11 +14,11 @@ class AppLogger {
       } else {
         developer.log(
           jsonEncode({'event': event, ...fields}),
-          name: 'FieldInspector',
+          name: 'Полевой инспектор',
         );
       }
     } catch (_) {
-      // Сбой диагностики никогда не должен отменять commit или retry.
+      // Сбой диагностики никогда не должен отменять фиксацию или повтор.
     }
   }
 }

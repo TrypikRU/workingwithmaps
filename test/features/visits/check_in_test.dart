@@ -102,7 +102,7 @@ void main() {
       expect(operation.entityId, id);
       expect(operation.operation, 'upsert');
       expect(operation.createdAt, visit.createdAt);
-      // Сервер ещё не знает о визите: повторный download не отменяет local visited.
+      // Сервер ещё не знает о посещении: повторная загрузка не отменяет локальный статус visited.
       await objects.mergeRemoteObjects([
         (object: object, updatedAt: DateTime.utc(2027)),
       ]);

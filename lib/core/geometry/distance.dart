@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'geo_point.dart';
 
 /// Haversine: расстояние по поверхности сферы в метрах, координаты в градусах.
-/// Не зависит от платформенного GPS SDK и одинаково работает в domain и тестах.
+/// Не зависит от платформенного GPS SDK и одинаково работает в предметной области и тестах.
 double calculateDistance(GeoPoint first, GeoPoint second) {
   if (!first.isValid || !second.isValid) {
     throw ArgumentError('Invalid geographic coordinates');

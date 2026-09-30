@@ -4,7 +4,7 @@ import '../database/app_database.dart';
 import '../../features/objects/data/object_dto.dart';
 import '../../features/visits/domain/visit_status.dart';
 
-/// Snapshot только для локальной диагностики/optimistic review. Он не DTO UI.
+/// Снимок только для локальной диагностики и проверки версий; не DTO интерфейса.
 Future<Map<String, dynamic>> readSyncEntity(
   AppDatabase db,
   String type,
@@ -47,7 +47,7 @@ Future<Map<String, dynamic>> readSyncEntity(
   throw StateError('Unsupported conflict entity');
 }
 
-/// 409 от proxy/debug может не содержать current или содержать чужую сущность.
+/// Ответ 409 от прокси или отладчика может не содержать current либо содержать чужую сущность.
 /// Такой ответ сохраняется как конфликт без возможности применить его в БД.
 Map<String, dynamic>? validatedServerSnapshot(
   String type,

@@ -95,7 +95,7 @@ void main() {
       )).data!;
       expect(latest['name'], 'C');
       expect(latest['serverVersion'], base + 4);
-      // Replay original operation after C: receipt returns A without rolling back C.
+      // Повтор исходной операции после C: сохранённое подтверждение возвращает A без отката C.
       final replay = await dio.patch<Map<String, dynamic>>(
         'objects/${original.id}',
         data: frozen.payload,

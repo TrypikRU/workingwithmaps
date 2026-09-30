@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    // AGP 9 provides built-in Kotlin; apply Flutter after the Android plugin.
+    // AGP 9 содержит встроенный Kotlin; плагин Flutter подключается после Android.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -15,10 +15,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // TODO: Укажите собственный уникальный идентификатор приложения (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.klochkov.workingwithmaps"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Следующие значения можно изменить под требования приложения.
+        // Подробнее: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -27,8 +27,8 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // TODO: Настройте собственную подпись для выпускной сборки.
+            // Пока используем отладочные ключи, чтобы работала команда `flutter run --release`.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

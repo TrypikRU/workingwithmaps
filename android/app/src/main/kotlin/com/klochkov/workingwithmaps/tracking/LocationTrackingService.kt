@@ -10,10 +10,13 @@ import android.util.Log
 import com.google.android.gms.location.*
 import com.klochkov.workingwithmaps.MainActivity
 
-/** Started service, not bound to Activity or FlutterEngine. Closing a Flutter view
- * never calls stopSelf. Only an explicit stop command terminates the route recorder.
- * Android may still terminate the process (force-stop, user Stop, OEM battery rules).
- * START_STICKY requests recovery; it is not a guarantee and does not bypass FGS rules. */
+/**
+ * Самостоятельно запущенный сервис не привязан к Activity или FlutterEngine. Закрытие
+ * представления Flutter не вызывает stopSelf: запись завершает явная команда остановки. Android
+ * всё же может завершить процесс по запросу пользователя или правилам энергосбережения
+ * производителя. START_STICKY запрашивает восстановление, но не гарантирует его и не обходит
+ * ограничения FGS.
+ */
 class LocationTrackingService : Service() {
     companion object {
         const val TAG = "FieldTracking"
@@ -35,9 +38,9 @@ class LocationTrackingService : Service() {
     private val replies = mutableListOf<ResultReceiver>()
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
-            // Delivered on our HandlerThread. Filtering + durable SQLite commit happen
-            // here, not in EventChannel and not on a Flutter isolate. Sorted batches
-            // protect against out-of-order fixes; persisted last sample rejects duplicates.
+            // Обработка выполняется в нашем HandlerThread. Фильтрация и фиксация в SQLite происходят
+            // здесь, а не в EventChannel или изоляте Flutter. Сортировка пакетов
+            // упорядочивает координаты; последняя сохранённая точка защищает от дубликатов.
             if (stopping) return
             try {
                 result.locations.sortedBy { it.time }.forEach { location ->
@@ -57,7 +60,7 @@ class LocationTrackingService : Service() {
         override fun onLocationAvailability(value: LocationAvailability) {
             if (!value.isLocationAvailable && !stopping) {
                 try { store.message("GPS недоступен: ожидание сигнала / проверьте геолокацию") }
-                catch (e: Exception) { fail("Ошибка журнала tracking: ${e.javaClass.simpleName}") }
+                catch (e: Exception) { fail("Ошибка журнала записи маршрута: ${e.javaClass.simpleName}") }
             }
         }
     }
@@ -68,8 +71,8 @@ class LocationTrackingService : Service() {
         thread = HandlerThread("FieldLocationWriter").apply { start() }
         worker = Handler(thread.looper)
         instance = this
-        // Android 8+ requires a channel before startForeground. LOW avoids sound on
-        // each counter update. The user controls visibility/importance in Settings.
+        // Android 8+ требует канал до startForeground. Уровень LOW исключает звук при
+        // каждом обновлении счётчика. Видимость и важность задаёт пользователь в настройках.
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(CHANNEL, "Отслеживание обхода", NotificationManager.IMPORTANCE_LOW))
@@ -82,9 +85,9 @@ class LocationTrackingService : Service() {
             stopRecording(reply)
             return START_NOT_STICKY
         }
-        // Promotion is immediate (before asynchronous location registration / I/O).
-        // Android 14 checks while-in-use access here too, not only in Activity.
-        // Catch SecurityException/FGS restrictions; never crash-loop a sticky service.
+        // Сразу переводим сервис в активный режим, до асинхронной подписки на координаты и ввода-вывода.
+        // Android 14 проверяет доступ во время использования и здесь, а не только в Activity.
+        // Обрабатываем SecurityException и ограничения FGS, не допуская циклических сбоев сервиса.
         try {
             if (!hasLocationPermission()) error("Нет разрешения на точную геолокацию")
             if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION, notification(0), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
@@ -125,8 +128,8 @@ class LocationTrackingService : Service() {
     private fun hasLocationPermission() = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     @Suppress("MissingPermission")
     private fun subscribe() {
-        // Permission may have been revoked between Activity check and this callback.
-        // Fine location is a product requirement: approximate fixes normally fail 50m.
+        // Разрешение могло быть отозвано между проверкой Activity и этим обратным вызовом.
+        // Точная геолокация нужна приложению: приблизительные координаты обычно не проходят порог 50 м.
         if (!hasLocationPermission()) { fail("Разрешите точную геолокацию"); return }
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
             .setMinUpdateIntervalMillis(2000).setMaxUpdateDelayMillis(0).build()
@@ -153,20 +156,20 @@ class LocationTrackingService : Service() {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
-        return builder.setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Field Inspector")
+        return builder.setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Полевой инспектор")
             .setContentText("Маршрут отслеживается · Собрано GPS-точек: $count")
             .setStyle(Notification.BigTextStyle().bigText("Маршрут отслеживается\nСобрано GPS-точек: $count"))
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).setCategory(Notification.CATEGORY_SERVICE).build()
     }
     private fun notifyProgress() {
-        // POST_NOTIFICATIONS denial on API33+ does not forbid FGS. Android still
-        // shows it in Task Manager, but may hide this notification from the drawer.
+        // Отказ в POST_NOTIFICATIONS на API 33+ не запрещает FGS. Android показывает
+        // сервис в диспетчере задач, но может скрыть уведомление из шторки.
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(store.state().optInt("count")))
     }
     fun stopRecording(reply: ResultReceiver?) {
         worker.post {
-            // Barrier: all already queued commits finish first. Further callbacks
-            // see stopping=true. Only then ACK stop, allowing Dart to drain and finish.
+            // Барьер записи: сначала завершаются уже поставленные в очередь транзакции. Новые вызовы
+            // видят stopping=true. Затем подтверждаем остановку, чтобы Dart импортировал остаток и завершил обход.
             stopping = true; recording = false
             fused.removeLocationUpdates(callback)
             try {
@@ -181,15 +184,15 @@ class LocationTrackingService : Service() {
         Log.w(TAG, message)
         stopping = true; recording = false
         fused.removeLocationUpdates(callback)
-        try { store.message(message) } catch (_: Exception) { /* Preserve existing inbox even on full disk. */ }
+        try { store.message(message) } catch (_: Exception) { /* Сохраняем существующую входящую очередь даже при заполненном диске. */ }
         val error = Bundle().apply { putString("error", message) }
         reply?.send(1, error)
         replies.filter { it !== reply }.forEach { it.send(1, error) }; replies.clear()
         Handler(mainLooper).post { stopForeground(STOP_FOREGROUND_REMOVE); stopSelf() }
     }
     override fun onDestroy() {
-        // Not a user stop: keep desired route persisted for next visible-app recovery.
-        // Do not delete the inbox. quitSafely lets earlier SQLite commits complete.
+        // Это не остановка пользователем: сохраняем обход для восстановления при открытии приложения.
+        // Входящую очередь не удаляем. quitSafely позволяет завершить начатые транзакции SQLite.
         recording = false; instance = null
         worker.post { stopping = true; fused.removeLocationUpdates(callback); worker.removeCallbacks(permissionWatch) }
         thread.quitSafely()

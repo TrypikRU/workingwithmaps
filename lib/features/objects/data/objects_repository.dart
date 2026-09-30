@@ -5,7 +5,7 @@ import 'object_dto.dart';
 import 'objects_remote_data_source.dart';
 
 /// Единственный источник объектов для UI — локальная БД.
-/// Repository не экспортирует Drift rows, companions или QueryExecutor.
+/// Репозиторий не экспортирует строки Drift, объекты Companion или QueryExecutor.
 class ObjectsRepository {
   ObjectsRepository(this._source, {this.remote});
 
@@ -16,7 +16,7 @@ class ObjectsRepository {
 
   Future<void> saveObject(TechnicalObject object) => _source.saveObject(object);
 
-  /// HTTP никогда не публикует список в UI: подписчики увидят только commit БД.
+  /// HTTP не публикует список напрямую в интерфейс: подписчики видят только зафиксированную БД.
   Future<void> refreshObjects() async {
     final source = remote;
     if (source == null) throw StateError('Remote source is not configured');
@@ -35,7 +35,7 @@ class ObjectsRepository {
     } on ArgumentError {
       throw const NetworkFailure(NetworkFailureKind.invalidData);
     }
-    // Валидация всего ответа до записи исключает частичное обновление cache.
+    // Проверка всего ответа до записи исключает частичное обновление кэша.
     await _source.mergeRemoteObjects(records);
   }
 }

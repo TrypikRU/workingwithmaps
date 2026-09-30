@@ -12,7 +12,7 @@ class FieldInspectorApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LocationLifecycle(
       child: MaterialApp.router(
-        title: 'Field Inspector',
+        title: 'Полевой инспектор',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,

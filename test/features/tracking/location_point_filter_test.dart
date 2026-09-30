@@ -16,7 +16,7 @@ void main() {
     () {
       const filter = LocationPointFilter();
       final previous = point(0, 0);
-      // About 5.56 m / 0.5 s is plausible; the same movement in 0.1 s is not.
+      // Около 5,56 м за 0,5 с допустимо; такое же перемещение за 0,1 с — нет.
       expect(filter.reject(point(0.00005, 500), previous: previous), isNull);
       expect(
         filter.reject(point(0.00005, 100), previous: previous),

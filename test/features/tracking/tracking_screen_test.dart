@@ -90,7 +90,7 @@ void main() {
     expect(find.text('Продолжительность: 00:00:30'), findsOneWidget);
     expect(find.text('Пройдено примерно: 22.2 м'), findsOneWidget);
     expect(find.text('• Тестовый объект'), findsOneWidget);
-    expect(find.text('Tracking: Запись GPS-точек'), findsOneWidget);
+    expect(find.text('Запись маршрута: Запись GPS-точек'), findsOneWidget);
     await tester.ensureVisible(find.text('Завершить обход'));
     await tester.tap(find.text('Завершить обход'));
     await tester.pumpAndSettle();

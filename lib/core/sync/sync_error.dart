@@ -30,8 +30,8 @@ class SyncException implements Exception {
     final status = error.response?.statusCode;
     if (error.error is SocketException ||
         error.type == DioExceptionType.cancel) {
-      // Graceful shutdown may cancel an in-flight request after server commit.
-      // Keep it retryable with the same frozen payload on the next launch.
+      // Штатное завершение может отменить текущий запрос уже после фиксации на сервере.
+      // Оставляем возможность повтора с теми же зафиксированными данными при следующем запуске.
       return const SyncException(
         SyncErrorKind.network,
         'Connection interrupted',
@@ -51,7 +51,7 @@ class SyncException implements Exception {
       DioExceptionType.badResponse => SyncErrorKind.client,
       _ => SyncErrorKind.client,
     };
-    // Не сохраняем error.toString(): Dio может включить чувствительный payload.
+    // Не сохраняем error.toString(): Dio может включить конфиденциальные данные запроса.
     return SyncException(kind, 'Remote request failed', statusCode: status);
   }
 

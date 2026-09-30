@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'geo_point.dart';
 
-/// Simple local ring, without holes. Edges are straight in longitude/latitude.
-/// Boundary (including a vertex) counts as inside. Ring may be closed or open;
-/// orientation is irrelevant. Date-line crossing is unwrapped about the first point.
+/// Простой локальный контур без отверстий. Рёбра прямые в координатах долготы и широты.
+/// Граница, включая вершины, считается внутренней. Контур может быть замкнут явно или неявно;
+/// направление обхода не важно. Переход линии смены дат разворачивается относительно первой точки.
 class GeoPolygon {
   GeoPolygon(List<GeoPoint> vertices) : vertices = List.unmodifiable(vertices) {
     if (vertices.length < 3 || vertices.any((p) => !p.isValid)) {
@@ -18,7 +18,7 @@ class GeoPolygon {
     if (xs.reduce(math.max) - xs.reduce(math.min) >= 180) {
       throw ArgumentError('Polygon must span less than 180 degrees');
     }
-    // Translating to the first vertex avoids cancellation for small GPS polygons.
+    // Перенос начала координат в первую вершину уменьшает потерю точности для малых GPS-полигонов.
     var area = 0.0;
     for (var i = 0; i < _ring.length; i++) {
       final a = _ring[i];
@@ -38,8 +38,7 @@ class GeoPolygon {
     if (!point.isValid) throw ArgumentError('Invalid point');
     final x = _longitude(point.longitude, vertices.first.longitude);
     final y = point.latitude;
-    const epsilon =
-        1e-10; // Degrees; floating-point boundary tolerance, not GPS accuracy.
+    const epsilon = 1e-10; // Градусы; допуск вычислений с плавающей точкой на границе, а не точность GPS.
     var inside = false;
     for (var i = 0; i < _ring.length; i++) {
       final (ax, ay) = _ring[i];
@@ -54,8 +53,8 @@ class GeoPolygon {
           ((x - ax) * dy - (y - ay) * dx).abs() <= epsilon * length) {
         return true;
       }
-      // Half-open Y interval counts a shared vertex once. Horizontal edges never
-      // divide by zero. Each crossing of the ray to +X toggles even/odd parity.
+      // Полуоткрытый интервал Y учитывает общую вершину один раз. Горизонтальные рёбра
+      // не вызывают деления на ноль. Каждое пересечение луча к +X меняет чётность.
       if ((ay > y) != (by > y) && x < ax + (y - ay) * dx / dy) inside = !inside;
     }
     return inside;

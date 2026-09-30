@@ -14,7 +14,7 @@ class Visits extends Table {
       textEnum<VisitStatus>().withDefault(const Constant('completed'))();
   RealColumn get latitude => real()();
   RealColumn get longitude => real()();
-  // Drift DSL: CHECK ссылается на колонку, getter переопределяется генератором.
+  // Drift DSL: CHECK ссылается на столбец, метод чтения свойства переопределяется генератором.
   // ignore: recursive_getters
   RealColumn get accuracy => real().check(accuracy.isBiggerOrEqualValue(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();

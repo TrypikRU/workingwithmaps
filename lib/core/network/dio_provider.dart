@@ -1,15 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Клиент remote data sources; UI не использует его напрямую.
-/// Создание provider ленивое: запуск приложения не требует адреса backend.
+/// Клиент удалённых источников данных; интерфейс не использует его напрямую.
+/// Провайдер создаётся лениво: запуск приложения не требует адреса сервера.
 final dioProvider = Provider<Dio>((ref) {
   final dio = createApiDio();
   ref.onDispose(() => dio.close(force: true));
   return dio;
 });
 
-/// Shared configuration for foreground repositories and headless workers.
+/// Общая конфигурация репозиториев открытого приложения и фоновых обработчиков.
 Dio createApiDio() {
   const baseUrl = String.fromEnvironment(
     'API_BASE_URL',

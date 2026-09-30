@@ -162,7 +162,7 @@ class _ObjectsMapState extends State<ObjectsMap> {
       });
     }
     // Drift может прислать новый список с прежними значениями. GPS меняется
-    // чаще объектов: сохраняем сами widgets слоёв, а не только их входные данные.
+    // чаще объектов: сохраняем сами виджеты слоёв, а не только их входные данные.
     if (!listEquals(oldWidget.objects, widget.objects) ||
         oldWidget.focusObjectId != widget.focusObjectId) {
       _cacheObjects(oldWidget.objects, oldWidget.focusObjectId);
@@ -208,7 +208,7 @@ class _ObjectsMapState extends State<ObjectsMap> {
           mapController: _controller,
           options: MapOptions(
             // initialCameraFit работает только при создании карты. Последующие
-            // действия пользователя управляют камерой через локальный controller.
+            // действия пользователя управляют камерой через локальный контроллер.
             initialCenter: focused != null
                 ? _point(focused)
                 : widget.objects.isNotEmpty
@@ -381,7 +381,7 @@ class _ObjectsMapState extends State<ObjectsMap> {
             bottom: 168,
             child: FloatingActionButton.small(
               heroTag: 'map-offline-region',
-              tooltip: 'Offline-регион',
+              tooltip: 'Офлайн-регион',
               onPressed: () => _controller.fitCamera(
                 CameraFit.bounds(
                   bounds: LatLngBounds(

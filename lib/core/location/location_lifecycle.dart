@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'location_controller.dart';
 
-/// Lifecycle приложения, а не вкладки: IndexedStack сохраняет скрытые экраны.
+/// Жизненный цикл приложения, а не вкладки: IndexedStack сохраняет скрытые экраны.
 class LocationLifecycle extends ConsumerStatefulWidget {
   const LocationLifecycle({super.key, required this.child});
   final Widget child;
@@ -40,7 +40,7 @@ class _LocationLifecycleState extends ConsumerState<LocationLifecycle>
       case AppLifecycleState.detached:
         controller.pause();
       case AppLifecycleState.inactive:
-        // Permission dialog тоже делает Activity inactive. Не прерываем диалог;
+        // Диалог разрешения тоже переводит Activity в inactive. Не прерываем диалог;
         // подписки отменяются при фактическом уходе в hidden/paused.
         break;
     }

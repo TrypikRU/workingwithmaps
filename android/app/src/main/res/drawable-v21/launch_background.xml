@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+<!-- Измените этот файл для настройки стартовой заставки -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="?android:colorBackground" />
 
-    <!-- You can insert your own image assets here -->
+    <!-- Здесь можно добавить собственные изображения -->
     <!-- <item>
         <bitmap
             android:gravity="center"

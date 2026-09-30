@@ -6,7 +6,7 @@ import '../../../core/network/dio_provider.dart';
 import '../../../core/sync/sync_conflict_remote_data_source.dart';
 import '../../../core/sync/sync_conflict.dart';
 import '../../../core/sync/sync_conflict_repository.dart';
-import '../../../core/sync/sync_snapshot.dart';
+import 'sync_labels.dart';
 
 final syncConflictRepositoryProvider = Provider(
   (ref) => SyncConflictRepository(
@@ -79,7 +79,7 @@ class SyncConflictsPanel extends ConsumerWidget {
                     Card(
                       child: ListTile(
                         title: Text(
-                          '${conflict.entityType} / ${conflict.entityId}',
+                          '${syncEntityLabel(conflict.entityType)} / ${conflict.entityId}',
                         ),
                         subtitle: Text(
                           conflict.resolvedAt == null
@@ -133,25 +133,25 @@ class _SyncConflictDialogState extends ConsumerState<SyncConflictDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SelectableText('${c.entityType} / ${c.entityId}'),
+            SelectableText('${syncEntityLabel(c.entityType)} / ${c.entityId}'),
             Text('Локальная версия: ${c.localVersion ?? 'неизвестна'}'),
-            SelectableText(prettySnapshot(c.currentLocalPayload)),
+            SelectableText(formatSyncDetails(c.currentLocalPayload)),
             const Divider(),
             Text('Серверная версия: ${c.serverVersion ?? 'неизвестна'}'),
             SelectableText(
               c.serverPayload == null
-                  ? 'Ответ 409 не содержит корректной серверной записи. Обновите серверную версию после устранения ошибки API.'
-                  : prettySnapshot(c.serverPayload!),
+                  ? 'Ответ 409 не содержит корректной серверной записи. Обновите серверную версию после устранения ошибки сервера.'
+                  : formatSyncDetails(c.serverPayload!),
             ),
             ExpansionTile(
               title: const Text('Отправленный запрос'),
-              children: [SelectableText(prettySnapshot(c.requestPayload))],
+              children: [SelectableText(formatSyncDetails(c.requestPayload))],
             ),
             if (c.resolvedAt == null)
               Text(
                 c.canKeepLocal
                     ? 'Принять серверную: заменить локальные поля и отменить ожидающие правки. Повторить локальную: отправить текущие поля с увиденной серверной версией; возможен новый конфликт.'
-                    : 'Visit — факт события. Сервер не перезаписывается. При принятии серверной записи локальный вариант останется в истории конфликта.',
+                    : 'Посещение — факт события. Сервер не перезаписывается. При принятии серверной записи локальный вариант останется в истории конфликта.',
               ),
             if (busy) const LinearProgressIndicator(),
             if (error != null)

@@ -80,14 +80,14 @@ class _CurrentRouteScreenState extends ConsumerState<CurrentRouteScreen> {
             const SizedBox(height: 16),
             const LocationStatusPanel(),
             Text(
-              'Текущая GPS accuracy: ${location.position == null || location.isLastKnown ? 'недоступна' : '±${location.position!.accuracy.toStringAsFixed(1)} м'}',
+              'Текущая точность геолокации: ${location.position == null || location.isLastKnown ? 'недоступна' : '±${location.position!.accuracy.toStringAsFixed(1)} м'}',
             ),
-            Text('Tracking: ${active ? tracking : 'остановлен'}'),
+            Text('Запись маршрута: ${active ? tracking : 'остановлена'}'),
             if (active)
               TextButton.icon(
                 onPressed: busy ? null : () => action(resume: true),
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('Возобновить tracking'),
+                label: const Text('Возобновить запись маршрута'),
               ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -99,7 +99,7 @@ class _CurrentRouteScreenState extends ConsumerState<CurrentRouteScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Android-сервис записывает GPS при свёрнутом приложении. Длительность включает паузы. Если Android остановил сервис, нажмите «Возобновить tracking».',
+              'Android-сервис записывает GPS при свёрнутом приложении. Длительность включает паузы. Если Android остановил сервис, нажмите «Возобновить запись маршрута».',
             ),
           ],
         ),

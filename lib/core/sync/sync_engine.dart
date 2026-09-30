@@ -7,9 +7,9 @@ import 'sync_status.dart';
 import 'sync_lease.dart';
 import 'sync_run_control.dart';
 
-/// Single-flight coalesces callers in one isolate; SQLite lease coordinates UI
-/// and WorkManager engines across isolates. Every writer uses this same engine.
-/// Нет Flutter, Riverpod, таймеров UI или WorkManager в самом engine.
+/// Совместный запуск объединяет вызовы в одном изоляте; блокировка SQLite согласует движки
+/// интерфейса и WorkManager между изолятами. Все отправители используют этот движок.
+/// Сам движок не зависит от Flutter, Riverpod, таймеров интерфейса или WorkManager.
 class SyncEngine {
   SyncEngine(
     this.processor, {
@@ -22,8 +22,8 @@ class SyncEngine {
   static Future<SyncResult>? _active;
   static final _activity = StreamController<bool>.broadcast(sync: true);
 
-  /// Scheduling hint only; retry classification and per-entity order stay here,
-  /// not in WorkManager. Permanent conflict at a head blocks later revisions.
+  /// Только подсказка планировщику; классификация повторов и порядок сущностей остаются здесь,
+  /// а не в WorkManager. Неразрешённый конфликт блокирует следующие версии своей сущности.
   Future<bool> hasRetryableWork() async {
     final heads = <String>{};
     for (final item in await processor.queued()) {
@@ -37,7 +37,7 @@ class SyncEngine {
     return false;
   }
 
-  /// Includes automatic runs and other instances, not just the screen's button.
+  /// Учитывает автоматические запуски и другие экземпляры, а не только кнопку экрана.
   Stream<bool> watchRunning() => Stream<bool>.multi((controller) {
     String? value;
     void emit() => controller.add(_active != null || SyncLease.isActive(value));
@@ -54,8 +54,8 @@ class SyncEngine {
     emit();
     controller.onCancel = () {
       timer.cancel();
-      // Cancel both subscriptions synchronously before awaiting any cleanup.
-      // This also lets Drift schedule stream disposal in the owning UI zone.
+      // Синхронно отменяем обе подписки до ожидания освобождения ресурсов.
+      // Это позволяет Drift запланировать закрытие потока в зоне его интерфейса.
       unawaited(subscription.cancel());
       unawaited(remote.cancel());
     };
@@ -64,8 +64,8 @@ class SyncEngine {
   Future<SyncResult> run({bool retryFailed = false, SyncRunControl? control}) {
     if (_active != null) {
       logger.log('sync.run.joined');
-      // Explicit retry is queued behind a foreground run instead of mutating
-      // rows that it may currently be sending. Ordinary runs still coalesce.
+      // Явный повтор ждёт текущего прохода, не меняя строки, которые тот может отправлять.
+      // Обычные запуски по-прежнему объединяются.
       if (retryFailed) {
         return _active!.then((_) => run(retryFailed: true, control: control));
       }
@@ -115,7 +115,7 @@ class SyncEngine {
         final heads = <String>{};
         final now = processor.clock().toUtc();
         final due = queue.where((item) {
-          // Не обгоняем старую операцию той же сущности, включая conflict и retry.
+          // Не обгоняем старую операцию той же сущности, включая конфликт и повтор.
           final key = '${item.entityType}:${item.entityId}';
           if (!heads.add(key) ||
               attempted.contains(item.id) ||

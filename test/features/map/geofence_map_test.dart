@@ -69,7 +69,7 @@ void main() {
         find.text('Вы находитесь рядом с объектом: Тестовая зона'),
         findsOneWidget,
       );
-      location.move(0); // Inside: no approaching hint, no automatic Check-in.
+      location.move(0); // Внутри зоны: нет подсказки о приближении и автоматической отметки о посещении.
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('approaching-object')), findsNothing);
       location.move(0.0009, accuracy: 80);

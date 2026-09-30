@@ -37,7 +37,7 @@ void main() {
       db = AppDatabase.forTesting(NativeDatabase(file), seedDemoData: false);
       source = DriftObjectsDataSource(db);
       expect((await source.watchObjects().first).single, object);
-      await db.delete(db.syncQueue).go(); // Local edit already acknowledged.
+      await db.delete(db.syncQueue).go(); // Локальная правка уже подтверждена.
       await source.mergeRemoteObjects([
         (
           object: object.copyWith(

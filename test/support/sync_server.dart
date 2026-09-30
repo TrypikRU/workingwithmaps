@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:workingwithmaps/core/database/app_database.dart';
 
-/// Mimics the API's durable entity-id/payload deduplication, including lost ACK.
-/// Actual Dio serialization and validation run above this transport fake.
+/// Имитирует постоянную защиту API от дубликатов по идентификатору и данным, включая потерю подтверждения.
+/// Настоящие сериализация и проверка Dio выполняются над этой подменой транспорта.
 class SyncServer implements HttpClientAdapter {
   final records = <String, Map<String, dynamic>>{};
   final requests = <Map<String, dynamic>>[];

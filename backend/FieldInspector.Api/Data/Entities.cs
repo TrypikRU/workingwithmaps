@@ -24,12 +24,12 @@ public sealed class FieldRoute
     public string Name { get; set; } = "";
     public DateOnly Date { get; set; }
     public RouteStatus Status { get; set; }
-    // Для read-only тестовых обходов достаточно упорядоченного JSON-массива ID.
+    // Для тестовых обходов, доступных только для чтения, достаточно упорядоченного JSON-массива идентификаторов.
     public string ObjectIdsJson { get; set; } = "[]";
     public long UpdatedAtTicks { get; set; }
 }
 
-// Успешный PATCH и его ответ коммитятся вместе для повтора после потери ACK.
+// Успешный PATCH и его ответ фиксируются вместе для повтора после потери подтверждения.
 public sealed class OperationReceipt
 {
     public string Key { get; set; } = "";

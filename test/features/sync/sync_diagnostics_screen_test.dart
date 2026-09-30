@@ -17,8 +17,8 @@ import 'package:workingwithmaps/features/sync/presentation/sync_screen.dart';
 import '../../support/sync_server.dart';
 import '../../support/test_database.dart';
 
-// Widget contract test: real Drift streams, controllable engine completion.
-// Actual HTTP/ACK/retry behavior is covered in sync_engine_test.dart.
+// Проверка контракта виджета: реальные потоки Drift, управляемое завершение движка.
+// Поведение HTTP, подтверждений и повторов проверяется в sync_engine_test.dart.
 class UiSyncEngine extends SyncEngine {
   UiSyncEngine(AppDatabase db)
     : super(
@@ -70,10 +70,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     for (final label in [
-      'Synced: 0',
-      'Pending: 0',
-      'Syncing: 0',
-      'Failed: 0',
+      'Синхронизировано: 0',
+      'Ожидает отправки: 0',
+      'Отправляется: 0',
+      'Ошибки: 0',
       'Пока не было',
     ]) {
       expect(find.text(label), findsOneWidget);
@@ -120,19 +120,22 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Пока не было'), findsOneWidget);
-      expect(find.text('Synced: 0'), findsOneWidget);
-      expect(find.text('Failed: 1'), findsOneWidget);
-      expect(find.text('entityType: visit'), findsOneWidget);
-      expect(find.text('entityId: demo-visit'), findsOneWidget);
-      expect(find.text('operation: upsert'), findsOneWidget);
-      expect(find.text('attemptCount: 1'), findsOneWidget);
-      expect(find.textContaining('createdAt:'), findsOneWidget);
-      expect(find.text('nextRetryAt: Автоповтор отключён'), findsOneWidget);
+      expect(find.text('Синхронизировано: 0'), findsOneWidget);
+      expect(find.text('Ошибки: 1'), findsOneWidget);
+      expect(find.text('Тип записи: Посещение'), findsOneWidget);
+      expect(find.text('Идентификатор записи: demo-visit'), findsOneWidget);
+      expect(find.text('Операция: Создание или обновление'), findsOneWidget);
+      expect(find.text('Количество попыток: 1'), findsOneWidget);
+      expect(find.textContaining('Создано:'), findsOneWidget);
+      expect(
+        find.text('Следующая попытка: Автоповтор отключён'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Подробности ошибки'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.textContaining('"statusCode": 409'), findsWidgets);
-      expect(find.text('operationId: stable-key'), findsOneWidget);
+      expect(find.textContaining('"Код ответа сервера": 409'), findsWidgets);
+      expect(find.text('Идентификатор операции: stable-key'), findsOneWidget);
       await tester.tap(find.text('Закрыть'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Повторить ошибочные'));
@@ -148,7 +151,7 @@ void main() {
             .onPressed,
         isNull,
       );
-      // Failed is visible until the committed result arrives, not deleted by UI.
+      // Ошибка видна до получения зафиксированного результата; интерфейс её не удаляет.
       expect(await db.select(db.syncQueue).get(), hasLength(1));
       await db.transaction(() async {
         await db.delete(db.syncQueue).go();
@@ -171,11 +174,11 @@ void main() {
       });
       sync.finish();
       await tester.pumpAndSettle();
-      expect(find.text('Synced: 1'), findsOneWidget);
-      expect(find.text('Failed: 0'), findsOneWidget);
+      expect(find.text('Синхронизировано: 1'), findsOneWidget);
+      expect(find.text('Ошибки: 0'), findsOneWidget);
       expect(find.text('Очередь пуста'), findsOneWidget);
       expect(find.text('Пока не было'), findsNothing);
-      // Foreground run outside the screen's action controller is visible too.
+      // Виден и запуск открытого приложения вне контроллера действий этого экрана.
       final automatic = sync.run();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 16));

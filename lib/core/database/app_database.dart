@@ -20,7 +20,7 @@ import 'polygon_converter.dart';
 
 part 'app_database.g.dart';
 
-/// Одно постоянное подключение, общие миграции и транзакции всех features.
+/// Одно постоянное подключение, общие миграции и транзакции всех функциональных модулей.
 @DriftDatabase(
   tables: [
     TechnicalObjects,
@@ -38,16 +38,16 @@ class AppDatabase extends _$AppDatabase {
     : seedDemoData = true,
       super(driftDatabase(name: 'field_inspector'));
 
-  /// В тестах можно отключить demo seed для проверки пустой БД и миграций.
+  /// В тестах можно отключить демонстрационные данные для проверки пустой БД и миграций.
   AppDatabase.forTesting(super.executor, {this.seedDemoData = true});
 
   final bool seedDemoData;
   int? _externalVersion;
   bool _checkingExternal = false;
 
-  /// Independent Flutter engines cannot share an IsolateNameServer reliably.
-  /// PRAGMA data_version detects commits on another SQLite connection; invalidate
-  /// Drift streams without making UI read the remote API or polling every table.
+  /// Независимые движки Flutter не могут надёжно использовать общий IsolateNameServer.
+  /// PRAGMA data_version обнаруживает фиксацию в другом подключении SQLite; обновляем
+  /// потоки Drift без запросов к удалённому API из интерфейса и без опроса каждой таблицы.
   Future<void> refreshExternalChanges() async {
     if (_checkingExternal) return;
     _checkingExternal = true;
@@ -88,8 +88,8 @@ class AppDatabase extends _$AppDatabase {
       from4To5: (m, schema) => transaction(() async {
         await m.addColumn(schema.objects, schema.objects.polygon);
         await m.addColumn(schema.objects, schema.objects.geofenceRadius);
-        // Backfill only the untouched, known demo location. User objects and
-        // relocated demo objects retain an empty polygon; no real boundaries inferred.
+        // Дополняем только неизменённый известный демонстрационный объект. Пользовательские и
+        // перемещённые учебные объекты сохраняют пустой контур; реальные границы не предполагаются.
         await customStatement(
           '''UPDATE objects SET polygon =
           '[{"latitude":55.7583,"longitude":37.6437},{"latitude":55.7583,"longitude":37.6447},{"latitude":55.7589,"longitude":37.6447},{"latitude":55.7589,"longitude":37.6437}]'
@@ -108,7 +108,7 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(schema.syncQueue, schema.syncQueue.syncStatus);
       }),
       from1To2: (m, schema) => transaction(() async {
-        // Используем неизменяемый snapshot v2, а не текущие определения таблиц:
+        // Используем неизменяемый снимок v2, а не текущие определения таблиц:
         // будущая v3 не должна случайно изменить поведение перехода v1 → v2.
         await m.createTable(schema.objects);
         await customStatement('''
@@ -139,8 +139,8 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
-  /// Миграция demo-данных без изменения схемы и очистки базы. Точное совпадение
-  /// старого адреса/геометрии делает её повторяемой, в том числе между engines.
+  /// Миграция демонстрационных данных без изменения схемы и очистки базы. Точное совпадение
+  /// старого адреса и геометрии делает её повторяемой, в том числе между движками.
   /// Очередь и факты визитов/треков не переписываем: их координаты исторические.
   Future<void> _relocateLegacyDemoObjects() => transaction(() async {
     for (final object in demoObjects) {
@@ -161,8 +161,8 @@ class AppDatabase extends _$AppDatabase {
           row.address == old.address &&
           row.latitude == old.latitude &&
           row.longitude == old.longitude;
-      // API пока не передаёт polygon. Если refresh уже перенёс точку, старую
-      // узнаваемую demo-границу также переносим при следующем открытии базы.
+      // API пока не передаёт polygon. Если обновление уже перенесло точку, старую
+      // узнаваемую учебную границу также переносим при следующем открытии базы.
       final isNewLocation =
           row.address == object.address &&
           row.latitude == object.latitude &&
@@ -178,7 +178,7 @@ class AppDatabase extends _$AppDatabase {
                 )
                 ..limit(1))
               .get();
-      // Даже failed/frozen операция должна разрешаться обычным SyncEngine,
+      // Даже ошибочная операция с зафиксированным запросом должна разрешаться обычным SyncEngine,
       // иначе её повтор мог бы молча вернуть старую геометрию на сервер.
       if (queued.isNotEmpty) continue;
       await (update(

@@ -14,7 +14,7 @@ class TechnicalObjects extends Table {
   TextColumn get address => text().withDefault(const Constant(''))();
   RealColumn get latitude => real()();
   RealColumn get longitude => real()();
-  // textEnum использует EnumNameConverter: перестановка элементов enum
+  // textEnum использует EnumNameConverter: перестановка элементов перечисления
   // не меняет смысл сохранённых значений. Переименование требует миграции.
   TextColumn get status =>
       textEnum<ObjectStatus>().withDefault(const Constant('planned'))();

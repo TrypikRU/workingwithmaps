@@ -63,12 +63,15 @@ void main() {
         expect(queued.entityId, id);
         expect(queued.entityType, 'visit');
         expect(queued.operation, 'upsert');
-        expect(server.requests, isEmpty); // Check-in never sends HTTP.
+        expect(
+          server.requests,
+          isEmpty,
+        ); // Отметка о посещении никогда не отправляет HTTP-запрос.
         if (attemptedBeforeClose) expect((await engine().run()).failed, 1);
         final persistedQueue = await db.select(db.syncQueue).getSingle();
 
-        // Real file-backed connection disposal, with new repositories and engine.
-        // This proves persistence, rather than reusing an in-memory provider cache.
+        // Закрываем настоящее файловое подключение, создаём новые репозитории и движок.
+        // Это проверяет сохранность данных, а не повторное использование кэша провайдера в памяти.
         await db.close();
         db = AppDatabase.forTesting(NativeDatabase(file));
         expect(

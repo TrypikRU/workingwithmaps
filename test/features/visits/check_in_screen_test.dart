@@ -57,7 +57,7 @@ void main() {
         expect(
           tester
               .widget<FilledButton>(
-                find.widgetWithText(FilledButton, 'Check-in'),
+                find.widgetWithText(FilledButton, 'Отметиться'),
               )
               .onPressed,
           isNull,
@@ -104,7 +104,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       FilledButton button() =>
-          tester.widget(find.widgetWithText(FilledButton, 'Check-in'));
+          tester.widget(find.widgetWithText(FilledButton, 'Отметиться'));
       expect(find.text('Вы вне допустимой зоны'), findsOneWidget);
       expect(button().onPressed, isNull);
       location.positions.add(
@@ -120,13 +120,16 @@ void main() {
       expect(find.text('Вы в допустимой зоне'), findsOneWidget);
       expect(find.text('0.0 м'), findsOneWidget);
       expect(button().onPressed, isNotNull);
-      // Stream cancellation may complete in the root zone. Await the button's
-      // async action outside fake time, including its real SQLite transaction.
+      // Отмена потока может завершиться в корневой зоне. Ждём асинхронное действие кнопки
+      // вне имитации времени, включая его настоящую транзакцию SQLite.
       final onPressed = button().onPressed! as Future<void> Function();
       await tester.runAsync(onPressed);
       await tester.pumpAndSettle();
       expect(find.text('Посещён'), findsOneWidget);
-      expect(find.text('Check-in сохранён на устройстве'), findsOneWidget);
+      expect(
+        find.text('Отметка о посещении сохранена на устройстве'),
+        findsOneWidget,
+      );
       expect(await db.select(db.visits).get(), hasLength(1));
       expect(await db.select(db.syncQueue).get(), hasLength(1));
       await tester.pumpWidget(const SizedBox.shrink());

@@ -22,7 +22,7 @@ final checkInControllerProvider = NotifierProvider<CheckInController, bool>(
 extension CheckInBlockMessage on CheckInBlock {
   String message(CheckInPolicy policy) => switch (this) {
     CheckInBlock.locationUnavailable =>
-      'Для Check-in нужна текущая GPS-позиция.',
+      'Для отметки о посещении нужно текущее местоположение.',
     CheckInBlock.poorAccuracy =>
       'Недостаточная точность GPS. Нужно не хуже ±${policy.maxAccuracy.toStringAsFixed(0)} м.',
     CheckInBlock.outsideRadius =>
@@ -38,8 +38,8 @@ class CheckInController extends Notifier<bool> {
     if (state) return null;
     state = true;
     try {
-      // Кнопка могла быть нарисована по прежнему fix. Перед сохранением заново
-      // проверяем permission/service и получаем позицию через общий location layer.
+      // Кнопка могла отображаться по прежним координатам. Перед сохранением заново
+      // проверяем разрешение и сервис, получаем позицию через общий слой геолокации.
       await ref.read(locationControllerProvider.notifier).refresh();
       if (!ref.mounted) return null;
       final location = ref.read(locationControllerProvider);
@@ -51,12 +51,12 @@ class CheckInController extends Notifier<bool> {
       await ref
           .read(visitsRepositoryProvider)
           .checkIn(objectId: objectId, position: location.position!);
-      return 'Check-in сохранён на устройстве';
+      return 'Отметка о посещении сохранена на устройстве';
     } on CheckInRejected catch (error) {
       if (!ref.mounted) return null;
       return error.reason.message(ref.read(checkInPolicyProvider));
     } catch (_) {
-      return 'Не удалось сохранить Check-in. Попробуйте ещё раз.';
+      return 'Не удалось сохранить отметку о посещении. Попробуйте ещё раз.';
     } finally {
       if (ref.mounted) state = false;
     }

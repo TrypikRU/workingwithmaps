@@ -7,8 +7,8 @@ class SyncDiagnosticsRepository {
   final AppDatabase _database;
 
   Stream<SyncDiagnostics> watch() {
-    // One SQL snapshot prevents a transient "queue removed, success not counted"
-    // frame. LEFT JOIN also emits metadata when the queue is empty.
+    // Один снимок SQL исключает промежуточное состояние «очередь удалена, успех не учтён».
+    // LEFT JOIN возвращает метаданные даже при пустой очереди.
     return _database
         .customSelect(
           '''

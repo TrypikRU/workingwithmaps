@@ -25,8 +25,8 @@ class LocationFailure implements Exception {
   final LocationFailureKind kind;
 }
 
-/// Реальная граница платформы: другой источник foreground-координат подключается
-/// заменой locationServiceProvider, без изменений экрана или state controller.
+/// Граница платформы: другой источник координат открытого приложения подключается
+/// заменой locationServiceProvider, без изменений экрана или контроллера состояния.
 abstract interface class LocationService {
   Future<bool> isServiceEnabled();
   Future<LocationAccess> checkPermission();

@@ -10,7 +10,7 @@ class OfflineMapDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(offlineMapControllerProvider);
     return AlertDialog(
-      title: const Text('Offline-карта'),
+      title: const Text('Офлайн-карта'),
       scrollable: true,
       content: SizedBox(
         width: 420,
@@ -20,11 +20,11 @@ class OfflineMapDialog extends ConsumerWidget {
           children: [
             const Text(OfflineMapPack.regionName),
             Text(
-              '${OfflineMapPack.expectedTiles().length} PNG-тайлов · zoom 13–16 · до 12 MiB',
+              '${OfflineMapPack.expectedTiles().length} фрагментов карты в формате PNG · масштаб 13–16 · до 12 МиБ',
             ),
             const Text(
-              '${OfflineMapPack.south}–${OfflineMapPack.north} N, '
-              '${OfflineMapPack.west}–${OfflineMapPack.east} E',
+              '${OfflineMapPack.south}–${OfflineMapPack.north} с. ш., '
+              '${OfflineMapPack.west}–${OfflineMapPack.east} в. д.',
             ),
             const SizedBox(height: 12),
             Text(
@@ -33,14 +33,14 @@ class OfflineMapDialog extends ConsumerWidget {
                   : 'Регион ещё не скачан',
             ),
             const Text(
-              'Сохранённые тайлы используются первыми. Вне покрытия — online OSM. Без сети вне области и zoom 13–16 карта недоступна; объекты и маршрут остаются видны.',
+              'Сначала используются сохранённые фрагменты карты. Вне покрытия карта OpenStreetMap загружается через интернет. Без сети карта доступна только в сохранённой области при масштабе 13–16; объекты и маршрут остаются видны.',
             ),
             const Text(
-              'Пакет готовится из разрешённого raster MBTiles и загружается с вашего ПК. Скачивание областей с публичного OSM tile server не выполняется.',
+              'Пакет готовится из растровой карты в формате MBTiles с разрешением на использование без интернета и загружается с вашего компьютера. Области с общедоступного сервера карт OpenStreetMap не скачиваются.',
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Только offline-тайлы'),
+              title: const Text('Только сохранённая карта'),
               value: state.offlineOnly,
               onChanged: state.busy
                   ? null
@@ -50,7 +50,7 @@ class OfflineMapDialog extends ConsumerWidget {
             ),
             if (state.busy) ...[
               const LinearProgressIndicator(),
-              Text('Получено: ${state.received ~/ 1024} KiB'),
+              Text('Получено: ${state.received ~/ 1024} КиБ'),
             ],
             if (state.error != null)
               Text(
@@ -74,7 +74,7 @@ class OfflineMapDialog extends ConsumerWidget {
                       .refreshTiles();
                   Navigator.pop(context);
                 },
-          child: const Text('Обновить тайлы'),
+          child: const Text('Обновить карту'),
         ),
         FilledButton(
           onPressed: state.busy

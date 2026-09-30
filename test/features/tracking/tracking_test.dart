@@ -93,7 +93,7 @@ void main() {
       expect(
         await db.select(db.syncQueue).get(),
         hasLength(3),
-      ); // registration + 2 points
+      ); // Регистрация и две точки.
       await repo.finish(id);
       expect(await repo.append(id, 'a', sample(0.0002, 20)), isFalse);
       expect((await repo.watchCurrent().first)!.status, RouteStatus.completed);

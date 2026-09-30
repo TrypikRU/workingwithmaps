@@ -12,8 +12,10 @@ import com.klochkov.workingwithmaps.tracking.TrackingStore
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Transport only: Activity can disappear without stopping recording. The service
- * keeps applicationContext and SQLite, never Activity, MethodChannel or an event sink. */
+/**
+ * Только передача данных: уничтожение Activity не останавливает запись. Сервис хранит
+ * applicationContext и SQLite, но не Activity, MethodChannel или получателя событий.
+ */
 class MainActivity : FlutterActivity() {
     private val io = Executors.newSingleThreadExecutor()
     private var channel: MethodChannel? = null
@@ -26,8 +28,8 @@ class MainActivity : FlutterActivity() {
         val store = TrackingStore.get(this)
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "field_inspector/tracking").also { bridge ->
             bridge.setMethodCallHandler { call, result ->
-                // Channel calls arrive on main. SQLite runs on an executor; replies
-                // return to main. read -> Drift commit -> ack is an explicit protocol.
+                // Вызовы канала приходят в главный поток. SQLite работает в отдельном исполнителе; ответы
+                // возвращаются в главный поток. Протокол: чтение → фиксация в Drift → подтверждение.
                 when (call.method) {
                     "requestNotificationPermission" -> {
                         if (Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) result.success(true)
@@ -39,12 +41,12 @@ class MainActivity : FlutterActivity() {
                         if (routeId.isNullOrBlank()) result.error("argument", "routeId required", null)
                         else if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) result.error("permission", "Разрешите точную геолокацию в настройках приложения", null)
                         else {
-                            // Android12+ restricts background FGS starts; Android14+
-                            // additionally enforces while-in-use permission at creation.
-                            // A permission dialog can briefly precede onPostResume, so
-                            // wait one UI turn; never schedule a background launch.
+                            // Android 12+ ограничивает запуск FGS из фона; Android 14+
+                            // дополнительно проверяет разрешение на доступ во время использования при создании сервиса.
+                            // Диалог разрешения может завершиться незадолго до onPostResume, поэтому
+                            // ждём один цикл обработки интерфейса; запуск из фона не планируем.
                             Handler(mainLooper).postDelayed({
-                                if (!visible || isFinishing || isDestroyed) result.error("not_visible", "Откройте приложение для запуска tracking", null)
+                                if (!visible || isFinishing || isDestroyed) result.error("not_visible", "Откройте приложение для запуска записи маршрута", null)
                                 else try {
                                     val intent = Intent(this, LocationTrackingService::class.java)
                                         .putExtra("routeId", routeId).putExtra("reply", receiver(result))
@@ -92,8 +94,8 @@ class MainActivity : FlutterActivity() {
     override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, grants: IntArray) {
         super.onRequestPermissionsResult(code, permissions, grants)
         if (code == 701) {
-            // Denial doesn't forbid FGS. Dart can explain notification settings;
-            // we do not demand ACCESS_BACKGROUND_LOCATION or loop permission dialogs.
+            // Отказ не запрещает FGS. Dart может пояснить настройки уведомлений;
+            // ACCESS_BACKGROUND_LOCATION не требуем и диалоги разрешений не зацикливаем.
             notificationReply?.success(grants.firstOrNull() == PackageManager.PERMISSION_GRANTED)
             notificationReply = null
         }

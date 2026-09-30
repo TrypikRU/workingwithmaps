@@ -91,12 +91,14 @@ class ObjectDetailsScreen extends ConsumerWidget {
                 ),
                 Text(
                   eligibility.distance == null
-                      ? 'Зона Check-in пока не определена'
+                      ? 'Зона отметки о посещении пока не определена'
                       : eligibility.distance! <= policy.radius
                       ? 'Вы в допустимой зоне'
                       : 'Вы вне допустимой зоны',
                 ),
-                Text('Радиус Check-in: ${policy.radius.toStringAsFixed(0)} м'),
+                Text(
+                  'Радиус отметки о посещении: ${policy.radius.toStringAsFixed(0)} м',
+                ),
                 if (eligibility.block != null)
                   Text(eligibility.block!.message(policy)),
                 const SizedBox(height: 24),
@@ -113,7 +115,7 @@ class ObjectDetailsScreen extends ConsumerWidget {
                           }
                         },
                   icon: const Icon(Icons.how_to_reg_outlined),
-                  label: Text(saving ? 'Проверяем позицию…' : 'Check-in'),
+                  label: Text(saving ? 'Проверяем позицию…' : 'Отметиться'),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(

@@ -48,7 +48,7 @@ class OfflineMapController extends Notifier<OfflineMapState> {
       publish();
     } catch (_) {
       publish(
-        error: 'Не удалось открыть offline-пакет. Можно скачать его заново.',
+        error: 'Не удалось открыть офлайн-пакет. Можно скачать его заново.',
       );
     }
   }
@@ -83,7 +83,7 @@ class OfflineMapController extends Notifier<OfflineMapState> {
       publish();
     } catch (_) {
       publish(
-        error: 'Пакет не установлен. Проверьте сервер, формат и разрешение на offline-использование. Прежняя карта сохранена.',
+        error: 'Пакет не установлен. Проверьте сервер, формат и разрешение на использование без интернета. Прежняя карта сохранена.',
       );
     }
   }

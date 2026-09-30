@@ -8,8 +8,8 @@ final objectsRefreshControllerProvider =
       ObjectsRefreshController.new,
     );
 
-/// Состояние refresh отделено от StreamProvider: сбой HTTP не заменяет cache
-/// экраном ошибки. Один controller предотвращает параллельные ручные загрузки.
+/// Состояние обновления отделено от StreamProvider: сбой HTTP не заменяет кэш
+/// экраном ошибки. Один контроллер предотвращает параллельные ручные загрузки.
 class ObjectsRefreshController extends Notifier<bool> {
   @override
   bool build() => false;

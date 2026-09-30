@@ -27,7 +27,7 @@ void main() {
       await db.transaction(() => enqueueObjectUpdate(db, 'object', now));
       final rows = await db.select(db.syncQueue).get();
       expect(rows, hasLength(3));
-      // Another edit may replace only the tail after the barrier.
+      // Следующая правка может заменить только хвост после барьера.
       await db.transaction(() => enqueueObjectUpdate(db, 'object', now));
       expect(
         (await db.select(db.syncQueue).get()).map((q) => q.id),

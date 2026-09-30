@@ -59,7 +59,7 @@ class SyncConflictRepository {
                 await readSyncEntity(db, row.entityType, row.entityId),
               );
             } on StateError {
-              // Legacy очередь могла ссылаться на уже отсутствующую запись.
+              // Старая очередь могла ссылаться на уже отсутствующую запись.
               // Сам конфликт должен оставаться видимым для диагностики.
             }
           }
@@ -121,7 +121,7 @@ class SyncConflictRepository {
         if (strategy == ConflictResolution.keepLocal &&
             row.entityType != 'object') {
           throw StateError(
-            'Visits — факты событий: перезапись серверной записи запрещена.',
+            'Посещения — факты событий: перезапись серверной записи запрещена.',
           );
         }
         final queue =
@@ -171,8 +171,8 @@ class SyncConflictRepository {
               ),
             );
           } else {
-            // Явный rebase поверх увиденной версии. Новый concurrent edit сервера
-            // снова даст 409; здесь нет force-write или last-write-wins по часам.
+            // Явное применение правки поверх показанной версии. Новое параллельное изменение сервера
+            // снова даст 409; принудительной перезаписи или выбора по времени здесь нет.
             await (db.update(
               db.technicalObjects,
             )..where((o) => o.id.equals(object.id))).write(

@@ -1,6 +1,6 @@
-"""Prepare ONE bounded offline pack from legally obtained raster MBTiles.
-No HTTP client, tile scraping or calls to OSM public tile servers.
-Python 3 standard library only.
+"""Подготовка одного ограниченного офлайн-пакета из законно полученного растрового MBTiles.
+Без HTTP-клиента, сбора тайлов и обращений к общедоступным серверам OSM.
+Используется только стандартная библиотека Python 3.
 """
 import argparse
 from contextlib import closing

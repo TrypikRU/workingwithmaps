@@ -16,7 +16,7 @@ import 'package:workingwithmaps/features/objects/presentation/objects_refresh_co
 
 import '../../support/test_database.dart';
 
-// Подменяем только HTTP transport. Repository, DTO parsing и SQLite настоящие.
+// Подменяем только передачу по HTTP. Репозиторий, разбор DTO и SQLite настоящие.
 class TestAdapter implements HttpClientAdapter {
   Object body = <Object>[];
   int status = 200;
@@ -65,7 +65,7 @@ void main() {
   late TestAdapter adapter;
   late ObjectsRepository repository;
 
-  // Each test owns an isolated DB; no network or emulator is required.
+  // У каждого теста отдельная БД; сеть и эмулятор не требуются.
   setUp(() {
     adapter = TestAdapter();
   });

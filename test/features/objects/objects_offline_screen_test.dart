@@ -51,7 +51,7 @@ void main() {
         expect(find.text(target.name), findsOneWidget);
         expect(find.text('Не удалось загрузить объекты'), findsNothing);
         expect(find.byType(CircularProgressIndicator), findsNothing);
-        // Dispose listeners before the test binding checks pending timers.
+        // Освобождаем слушателей до проверки ожидающих таймеров тестовой средой.
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
       },

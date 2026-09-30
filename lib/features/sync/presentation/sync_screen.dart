@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +5,7 @@ import '../../../core/sync/sync_status.dart';
 import '../domain/sync_diagnostics.dart';
 import 'sync_diagnostics_providers.dart';
 import 'sync_conflicts_panel.dart';
+import 'sync_labels.dart';
 
 class SyncScreen extends ConsumerWidget {
   const SyncScreen({super.key});
@@ -61,22 +60,22 @@ class SyncScreen extends ConsumerWidget {
                         runSpacing: 8,
                         children: [
                           _StatusCount(
-                            label: 'Synced',
+                            label: 'Синхронизировано',
                             count: data.synced,
                             icon: Icons.cloud_done_outlined,
                           ),
                           _StatusCount(
-                            label: 'Pending',
+                            label: 'Ожидает отправки',
                             count: data.count(SyncStatus.pending),
                             icon: Icons.schedule,
                           ),
                           _StatusCount(
-                            label: 'Syncing',
+                            label: 'Отправляется',
                             count: data.count(SyncStatus.syncing),
                             icon: Icons.sync,
                           ),
                           _StatusCount(
-                            label: 'Failed',
+                            label: 'Ошибки',
                             count: data.count(SyncStatus.failed),
                             icon: Icons.error_outline,
                           ),
@@ -84,7 +83,7 @@ class SyncScreen extends ConsumerWidget {
                       ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Synced — всего подтверждённых операций с включения диагностики. Остальные счётчики — текущая очередь.',
+                      '«Синхронизировано» — всего подтверждённых операций с включения диагностики. Остальные счётчики — текущая очередь.',
                     ),
                     if (busy)
                       const Padding(
@@ -127,12 +126,12 @@ class SyncScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Обычный запуск учитывает nextRetryAt. Повтор ошибочных снимает задержку, но не разрешает конфликт автоматически. Ошибки сохраняются до успешного подтверждения.',
+                      'Обычный запуск учитывает время следующей попытки. Повтор ошибочных снимает задержку, но не разрешает конфликт автоматически. Ошибки сохраняются до успешного подтверждения.',
                     ),
                     const SizedBox(height: 24),
                     const SyncConflictsPanel(),
                     Text(
-                      'Queue operations',
+                      'Операции в очереди',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const Text(
@@ -220,24 +219,24 @@ class _OperationCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '#${item.id} · ${item.status.name}',
+              '#${item.id} · ${item.status.label}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            Text('entityType: ${item.entityType}'),
-            SelectableText('entityId: ${item.entityId}'),
-            Text('operation: ${item.operation}'),
-            Text('createdAt: ${formatSyncTime(item.createdAt)}'),
-            Text('attemptCount: ${item.attemptCount}'),
+            Text('Тип записи: ${syncEntityLabel(item.entityType)}'),
+            SelectableText('Идентификатор записи: ${item.entityId}'),
+            Text('Операция: ${syncOperationLabel(item.operation)}'),
+            Text('Создано: ${formatSyncTime(item.createdAt)}'),
+            Text('Количество попыток: ${item.attemptCount}'),
             Text(
-              'nextRetryAt: ${item.nextRetryAt == null
+              'Следующая попытка: ${item.nextRetryAt == null
                   ? item.status == SyncStatus.failed
                         ? 'Автоповтор отключён'
                         : 'Без задержки'
                   : formatSyncTime(item.nextRetryAt!)}',
             ),
             Text(
-              'lastError: ${item.lastError ?? 'Нет'}',
+              'Последняя ошибка: ${item.lastError == null ? 'Нет' : formatSyncDetails(item.lastError!)}',
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
@@ -248,13 +247,9 @@ class _OperationCard extends StatelessWidget {
                   icon: const Icon(Icons.bug_report_outlined),
                   label: const Text('Подробности ошибки'),
                   onPressed: () {
-                    var details = item.lastError ?? 'Подробности не сохранены';
-                    try {
-                      details = const JsonEncoder.withIndent('  ')
-                          .convert(jsonDecode(details));
-                    } catch (_) {
-                      /* Legacy errors may be plain text. */
-                    }
+                    final details = formatSyncDetails(
+                      item.lastError ?? 'Подробности не сохранены',
+                    );
                     showDialog<void>(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -264,10 +259,10 @@ class _OperationCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SelectableText(
-                              '${item.entityType} / ${item.entityId}',
+                              '${syncEntityLabel(item.entityType)} / ${item.entityId}',
                             ),
                             SelectableText(
-                              'operationId: ${item.operationId ?? 'Ещё не назначен'}',
+                              'Идентификатор операции: ${item.operationId ?? 'Ещё не назначен'}',
                             ),
                             const SizedBox(height: 12),
                             SelectableText(details),

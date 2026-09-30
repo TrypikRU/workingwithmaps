@@ -24,7 +24,7 @@ class VisitsRepository {
       _database.technicalObjects,
     )..where((row) => row.id.equals(objectId))).getSingleOrNull();
     if (object == null) throw StateError('Object no longer exists');
-    // Проверяем координаты объекта из БД внутри транзакции: HTTP refresh мог
+    // Проверяем координаты объекта из БД внутри транзакции: обновление по HTTP могло
     // изменить их после построения экрана. UI не может обойти бизнес-правило.
     final eligibility = policy.evaluate(
       GeoPoint(object.latitude, object.longitude),
@@ -37,7 +37,7 @@ class VisitsRepository {
               ..where((r) => r.status.equalsValue(RouteStatus.active))
               ..limit(1))
             .getSingleOrNull();
-    // 128 случайных бит: offline ID не требует сервера и стабилен для retry.
+    // 128 случайных бит: локальный идентификатор не требует сервера и сохраняется при повторах.
     final random = Random.secure();
     final id = List.generate(
       16,

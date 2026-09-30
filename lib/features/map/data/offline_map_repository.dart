@@ -8,8 +8,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../domain/offline_map_pack.dart';
 
-/// Один ограниченный пакет в application support, отдельно от бизнес-БД и
-/// обычного HTTP cache flutter_map. Не содержит downloader для OSM XYZ endpoint.
+/// Один ограниченный пакет в служебном каталоге приложения, отдельно от бизнес-БД и
+/// обычного HTTP-кэша flutter_map. Загрузчика областей с OSM XYZ здесь нет.
 class OfflineMapRepository {
   OfflineMapRepository({
     required this.dio,
@@ -103,7 +103,7 @@ class OfflineMapRepository {
   }
 
   Future<void> _validateImages(OfflineMapPack candidate) async {
-    // Header недостаточен: проверяем реальные PNG до публикации всего пакета.
+    // Одного заголовка недостаточно: проверяем реальные PNG до публикации всего пакета.
     // Декодируем последовательно и освобождаем изображения, ограничивая память.
     for (final bytes in candidate.tiles.values) {
       final codec = await ui.instantiateImageCodec(bytes);

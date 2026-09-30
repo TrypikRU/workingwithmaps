@@ -70,8 +70,8 @@ class GeolocatorLocationService implements LocationService {
   @override
   Stream<LocationFix> watchPosition() async* {
     try {
-      // Нет foregroundNotificationConfig: Android foreground service и
-      // background location не запускаются. Lifecycle контролируется снаружи.
+      // Нет foregroundNotificationConfig: сервис геолокации Android и
+      // фоновое определение координат не запускаются. Жизненный цикл контролируется снаружи.
       yield* Geolocator.getPositionStream(
         locationSettings: AndroidSettings(
           accuracy: LocationAccuracy.high,

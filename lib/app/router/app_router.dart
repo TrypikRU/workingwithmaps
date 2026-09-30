@@ -52,7 +52,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // Детали поверх shell: Back возвращает к исходной вкладке и её камере.
+      // Детали поверх оболочки: кнопка «Назад» возвращает к исходной вкладке и её камере.
       GoRoute(
         path: '/objects/:objectId',
         name: 'object-details',

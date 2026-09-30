@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 /// Экранная сетка Web Mercator: O(n), без попарного сравнения объектов.
-/// Целый zoom делает группы стабильными при панорамировании и плавном zoom.
+/// Целый уровень масштаба сохраняет устойчивость групп при перемещении и плавном масштабировании.
 List<List<Marker>> clusterMarkers(List<Marker> markers, int zoom) {
   final cells = <(int, int), List<Marker>>{};
   final scale = 256 * math.pow(2, zoom);
@@ -55,11 +55,11 @@ class _ClusteredObjectLayerState extends State<ClusteredObjectLayer> {
     final controller = MapController.of(context);
     final bounds = LatLngBounds.fromPoints(group.map((m) => m.point).toList());
     // Совпадающие координаты нельзя разделить увеличением масштаба. Список
-    // гарантирует доступ к каждому объекту даже на максимальном zoom.
+    // гарантирует доступ к каждому объекту даже на максимальном масштабе.
     if (controller.camera.zoom >= 19 ||
         group.every((m) => m.point == group.first.point)) {
-      // Снимок группы живёт до закрытия sheet: обновление Drift не должно
-      // сопоставлять старые marker instances с новой таблицей объектов.
+      // Снимок группы живёт до закрытия панели: обновление Drift не должно
+      // сопоставлять старые экземпляры маркеров с новой таблицей объектов.
       final labelFor = widget.labelFor;
       final onChoose = widget.onChoose;
       showModalBottomSheet<void>(
@@ -134,8 +134,8 @@ class _ClusteredObjectLayerState extends State<ClusteredObjectLayer> {
         if (widget.focusedMarker != null) widget.focusedMarker!,
       ];
     }
-    // MarkerLayer сам отсекает элементы вне viewport. Панорамирование меняет
-    // проекцию видимых элементов, но не создаёт заново индекс и marker widgets.
+    // MarkerLayer сам отсекает элементы вне видимой области. Перемещение карты меняет
+    // проекцию видимых элементов, но не пересоздаёт индекс и виджеты маркеров.
     return MarkerLayer(markers: _visible);
   }
 }

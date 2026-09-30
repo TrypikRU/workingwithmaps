@@ -46,39 +46,45 @@ void main() {
     },
   );
 
-  test('Queue failure rolls back object update and emits no intermediate state', () async {
-    final database = createTestDatabase(seedDemoData: false);
-    addTearDown(database.close);
-    final repository = ObjectsRepository(DriftObjectsDataSource(database));
-    const object = TechnicalObject(
-      id: 'rollback',
-      name: 'Исходное имя',
-      latitude: 55,
-      longitude: 37,
-    );
-    await repository.saveObject(object);
-    final emissions = <List<TechnicalObject>>[];
-    final subscription = repository.watchObjects().listen(emissions.add);
-    addTearDown(subscription.cancel);
-    await pumpEventQueue();
-    // A уже отправлялась: B обязана вставить отдельную операцию, а не coalesce.
-    await database.customStatement(
-      "UPDATE sync_queue SET payload='{}', operation_id='frozen'",
-    );
-    // Имитируем сбой второй записи транзакции, не меняя production-код.
-    await database.customStatement('''
+  test(
+    'Queue failure rolls back object update and emits no intermediate state',
+    () async {
+      final database = createTestDatabase(seedDemoData: false);
+      addTearDown(database.close);
+      final repository = ObjectsRepository(DriftObjectsDataSource(database));
+      const object = TechnicalObject(
+        id: 'rollback',
+        name: 'Исходное имя',
+        latitude: 55,
+        longitude: 37,
+      );
+      await repository.saveObject(object);
+      final emissions = <List<TechnicalObject>>[];
+      final subscription = repository.watchObjects().listen(emissions.add);
+      addTearDown(subscription.cancel);
+      await pumpEventQueue();
+      // A уже отправлялась: B обязана добавить отдельную операцию, а не объединяться с ней.
+      await database.customStatement(
+        "UPDATE sync_queue SET payload='{}', operation_id='frozen'",
+      );
+      // Имитируем сбой второй записи транзакции, не меняя рабочий код.
+      await database.customStatement('''
       CREATE TEMP TRIGGER reject_queue BEFORE INSERT ON sync_queue
       BEGIN SELECT RAISE(ABORT, 'test queue failure'); END
     ''');
-    await expectLater(
-      repository.saveObject(object.copyWith(name: 'Не должно сохраниться')),
-      throwsA(isA<Exception>()),
-    );
-    await pumpEventQueue();
-    expect(await repository.watchObjects().first, [object]);
-    expect(emissions.every((rows) => rows.single.name == object.name), isTrue);
-    expect(await database.select(database.syncQueue).get(), hasLength(1));
-  });
+      await expectLater(
+        repository.saveObject(object.copyWith(name: 'Не должно сохраниться')),
+        throwsA(isA<Exception>()),
+      );
+      await pumpEventQueue();
+      expect(await repository.watchObjects().first, [object]);
+      expect(
+        emissions.every((rows) => rows.single.name == object.name),
+        isTrue,
+      );
+      expect(await database.select(database.syncQueue).get(), hasLength(1));
+    },
+  );
 
   test('Generated model preserves fields in JSON round trip', () {
     const object = TechnicalObject(

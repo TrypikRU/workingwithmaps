@@ -138,7 +138,7 @@ void main() {
       await pump(
         List.of(objects),
         61.650478,
-      ); // Equivalent Drift emission also reuses layers.
+      ); // Эквивалентное обновление Drift также повторно использует слои.
       expect(cluster(), same(original));
       final edited = [...objects];
       edited[0] = edited[0].copyWith(
@@ -176,8 +176,8 @@ void main() {
       await tester.tap(find.byTooltip('Приблизить'));
       await tester.pumpAndSettle();
       expect(controller.camera.zoom, closeTo(zoom + 1, 0.00001));
-      // A focus command exposes the selected object even inside a dense cluster,
-      // preserving the existing map controller rather than remounting the map.
+      // Команда фокуса показывает выбранный объект даже внутри плотного кластера,
+      // сохраняя существующий контроллер карты без её пересоздания.
       await pump(edited, 61.650478, revision: 1, focused: edited.first.id);
       expect(
         tester.widget<FlutterMap>(find.byType(FlutterMap)).mapController,

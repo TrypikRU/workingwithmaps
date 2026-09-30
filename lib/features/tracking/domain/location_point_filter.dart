@@ -34,7 +34,7 @@ class LocationPointFilter {
       GeoPoint(current.latitude, current.longitude),
     );
     if (distance < minDistance) return PointRejection.movement;
-    // Проверяем скорость по координатам/времени, а не доверяем GPS speed.
+    // Проверяем скорость по координатам и времени, а не доверяем скорости от GPS.
     if (distance / seconds > maxSpeed) return PointRejection.speed;
     return null;
   }

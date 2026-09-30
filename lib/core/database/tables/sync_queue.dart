@@ -12,13 +12,13 @@ class SyncQueue extends Table {
   TextColumn get payload => text().nullable()();
   TextColumn get syncStatus =>
       textEnum<SyncStatus>().withDefault(const Constant('pending'))();
-  // Локальный номер операции; глобальные id сущностей хранятся отдельно.
+  // Локальный номер операции; глобальные идентификаторы сущностей хранятся отдельно.
   IntColumn get id => integer().autoIncrement()();
   TextColumn get entityType => text()();
   TextColumn get entityId => text()();
   TextColumn get operation => text()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-  // Drift DSL: CHECK ссылается на колонку, getter переопределяется генератором.
+  // Drift DSL: CHECK ссылается на столбец, метод чтения свойства переопределяется генератором.
   IntColumn get attemptCount => integer()
       .withDefault(const Constant(0))
       // ignore: recursive_getters

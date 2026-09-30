@@ -83,7 +83,7 @@ void main() {
     expect(find.text('Нет текущей позиции'), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Check-in'))
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Отметиться'))
           .onPressed,
       isNull,
     );
@@ -105,7 +105,7 @@ void main() {
       );
     }
 
-    // Повторный выбор того же id должен дать новую команду камеры.
+    // Повторный выбор того же идентификатора должен дать новую команду камеры.
     await tester.tap(find.byKey(ValueKey('marker-${object.id}')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Показать на карте'));
@@ -163,7 +163,7 @@ void main() {
       );
       addTearDown(container.dispose);
       // Riverpod 3 приостанавливает поток без активных слушателей. Здесь
-      // подписка имитирует ref.watch экрана, а не одиночное чтение provider.
+      // подписка имитирует ref.watch экрана, а не одиночное чтение провайдера.
       final subscription = container.listen(
         objectsProvider,
         (previous, next) {},

@@ -17,13 +17,13 @@ T _$identity<T>(T value) => value;
 mixin _$TechnicalObject {
 
  String get id; String get name; String get address; double get latitude; double get longitude; ObjectStatus get status; ObjectPriority get priority; int? get serverVersion; double get geofenceRadius; List<GeoPoint> get polygon;
-/// Create a copy of TechnicalObject
-/// with the given fields replaced by the non-null parameter values.
+/// Создаёт копию TechnicalObject
+/// с заменой указанных полей ненулевыми значениями параметров.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $TechnicalObjectCopyWith<TechnicalObject> get copyWith => _$TechnicalObjectCopyWithImpl<TechnicalObject>(this as TechnicalObject, _$identity);
 
-  /// Serializes this TechnicalObject to a JSON map.
+  /// Преобразует TechnicalObject в словарь JSON.
   Map<String, dynamic> toJson();
 
 
@@ -69,8 +69,8 @@ class _$TechnicalObjectCopyWithImpl<$Res>
   final TechnicalObject _self;
   final $Res Function(TechnicalObject) _then;
 
-/// Create a copy of TechnicalObject
-/// with the given fields replaced by the non-null parameter values.
+/// Создаёт копию TechnicalObject
+/// с заменой указанных полей ненулевыми значениями параметров.
 @pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? latitude = null,Object? longitude = null,Object? status = null,Object? priority = null,Object? serverVersion = freezed,Object? geofenceRadius = null,Object? polygon = null,}) {
   return _then(TechnicalObject(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
@@ -90,11 +90,11 @@ as List<GeoPoint>,
 }
 
 
-/// Adds pattern-matching-related methods to [TechnicalObject].
+/// Добавляет методы сопоставления с образцом для [TechnicalObject].
 extension TechnicalObjectPatterns on TechnicalObject {
-/// A variant of `map` that fallback to returning `orElse`.
+/// Вариант `map`, использующий `orElse` при отсутствии совпадения.
 ///
-/// It is equivalent to doing:
+/// Эквивалентно следующему коду:
 /// ```dart
 /// switch (sealedClass) {
 ///   case final Subclass value:
@@ -113,10 +113,10 @@ return $default(_that);case _:
 
 }
 }
-/// A `switch`-like method, using callbacks.
+/// Аналог `switch`, использующий обратные вызовы.
 ///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
+/// Обратные вызовы получают исходный объект, приведённый к соответствующему типу.
+/// Эквивалентно следующему коду:
 /// ```dart
 /// switch (sealedClass) {
 ///   case final Subclass value:
@@ -135,9 +135,9 @@ return $default(_that);case _:
 
 }
 }
-/// A variant of `map` that fallback to returning `null`.
+/// Вариант `map`, возвращающий `null` при отсутствии совпадения.
 ///
-/// It is equivalent to doing:
+/// Эквивалентно следующему коду:
 /// ```dart
 /// switch (sealedClass) {
 ///   case final Subclass value:
@@ -156,9 +156,9 @@ return $default(_that);case _:
 
 }
 }
-/// A variant of `when` that fallback to an `orElse` callback.
+/// Вариант `when`, вызывающий `orElse` при отсутствии совпадения.
 ///
-/// It is equivalent to doing:
+/// Эквивалентно следующему коду:
 /// ```dart
 /// switch (sealedClass) {
 ///   case Subclass(:final field):
@@ -176,10 +176,10 @@ return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude
 
 }
 }
-/// A `switch`-like method, using callbacks.
+/// Аналог `switch`, использующий обратные вызовы.
 ///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
+/// В отличие от `map`, поддерживает деструктуризацию.
+/// Эквивалентно следующему коду:
 /// ```dart
 /// switch (sealedClass) {
 ///   case Subclass(:final field):
@@ -197,9 +197,9 @@ return $default(_that.id,_that.name,_that.address,_that.latitude,_that.longitude
 
 }
 }
-/// A variant of `when` that fallback to returning `null`
+/// Вариант `when`, возвращающий `null` при отсутствии совпадения.
 ///
-/// It is equivalent to doing:
+/// Эквивалентно следующему коду:
 /// ```dart
 /// switch (sealedClass) {
 ///   case Subclass(:final field):
@@ -244,8 +244,8 @@ class _TechnicalObject implements TechnicalObject {
 }
 
 
-/// Create a copy of TechnicalObject
-/// with the given fields replaced by the non-null parameter values.
+/// Создаёт копию TechnicalObject
+/// с заменой указанных полей ненулевыми значениями параметров.
 @override @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 _$TechnicalObjectCopyWith<_TechnicalObject> get copyWith => __$TechnicalObjectCopyWithImpl<_TechnicalObject>(this, _$identity);
@@ -294,8 +294,8 @@ class __$TechnicalObjectCopyWithImpl<$Res>
   final _TechnicalObject _self;
   final $Res Function(_TechnicalObject) _then;
 
-/// Create a copy of TechnicalObject
-/// with the given fields replaced by the non-null parameter values.
+/// Создаёт копию TechnicalObject
+/// с заменой указанных полей ненулевыми значениями параметров.
 @override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? address = null,Object? latitude = null,Object? longitude = null,Object? status = null,Object? priority = null,Object? serverVersion = freezed,Object? geofenceRadius = null,Object? polygon = null,}) {
   return _then(_TechnicalObject(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable

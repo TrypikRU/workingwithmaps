@@ -1,8 +1,8 @@
 import '../../../core/location/native_tracking.dart';
 import '../../route/data/route_repository.dart';
 
-/// ACK only AFTER a Drift commit. A crash before ACK causes harmless replay.
-/// A SQLite error leaves the complete native batch available for a later retry.
+/// Подтверждение отправляется только ПОСЛЕ фиксации Drift. Сбой до него приводит к безопасному повтору.
+/// При ошибке SQLite весь пакет платформы остаётся доступным для следующей попытки.
 class NativeTrackImporter {
   NativeTrackImporter(this.native, this.repository);
   final NativeTracking native;

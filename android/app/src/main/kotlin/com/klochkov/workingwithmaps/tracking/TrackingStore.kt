@@ -7,10 +7,12 @@ import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONObject
 import java.util.UUID
 
-/** Durable native inbox. НЕ открывает Drift-файл: его миграциями владеет Dart.
- * SQLite commit предшествует любому сообщению Flutter. Activity/FlutterEngine могут
- * отсутствовать: точки остаются здесь до подтверждения транзакционного импорта.
- * synchronized сериализует channel worker и location worker внутри процесса. */
+/**
+ * Надёжная входящая очередь платформы. Файл Drift не открываем: его миграциями управляет Dart.
+ * Фиксация в SQLite предшествует сообщениям Flutter. При отсутствии Activity/FlutterEngine точки
+ * хранятся до подтверждения импорта. synchronized упорядочивает обработчики канала и координат
+ * внутри процесса.
+ */
 class TrackingStore private constructor(context: Context) :
     SQLiteOpenHelper(context.applicationContext, "tracking_inbox.sqlite", null, 1) {
     companion object {
@@ -37,7 +39,7 @@ class TrackingStore private constructor(context: Context) :
     @Synchronized fun begin(routeId: String) {
         val old = state()
         val next = if (old.optString("routeId") == routeId) old else JSONObject().put("count", 0)
-        // Process/service restart creates a gap; ordinary Activity detach does not.
+        // Перезапуск процесса или сервиса создаёт разрыв; обычное отсоединение Activity — нет.
         next.put("routeId", routeId).put("desired", true).put("segmentId", UUID.randomUUID().toString())
             .put("message", "Ожидание GPS").remove("last")
         saveState(next)
@@ -49,8 +51,8 @@ class TrackingStore private constructor(context: Context) :
     @Synchronized fun accept(fix: GpsFix): Boolean {
         val next = state()
         if (!next.optBoolean("desired")) return false
-        // A new segment resets geometry, not time: a replayed last fix following
-        // process recovery must not become another point with a new UUID.
+        // Новый сегмент сбрасывает геометрию, но не время: повтор последней точки после
+        // восстановления процесса не должен создавать ещё одну точку с новым UUID.
         if (fix.timestamp <= next.optLong("lastTimestamp", Long.MIN_VALUE)) return false
         if (fix.accuracy.isFinite()) next.put("accuracy", fix.accuracy)
         val previous = next.optJSONObject("last")?.let { fromJson(it) }
@@ -68,7 +70,7 @@ class TrackingStore private constructor(context: Context) :
             db.insertOrThrow("points", null, ContentValues().apply {
                 put("id", point.getString("id")); put("data", point.toString())
             })
-            // Baseline and count survive inbox ACK/deletion, preventing filter resets.
+            // База фильтра и счётчик переживают подтверждение и удаление очереди, предотвращая сброс фильтра.
             saveState(next.put("last", point).put("lastTimestamp", fix.timestamp).put("count", next.optInt("count") + 1)
                 .put("message", "Маршрут отслеживается"))
             db.setTransactionSuccessful()

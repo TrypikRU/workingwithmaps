@@ -1,128 +1,142 @@
-# Android foreground location tracking
+# Запись маршрута средствами Android
 
 ## Сохранение без Flutter
 
-`FusedLocationProviderClient → GpsFilter → TrackingStore (tracking_inbox.sqlite)`.
-Сервис — started Foreground Service, type `location`, stopWithTask=false, не bound
-к Activity/FlutterEngine. SQLite и HandlerThread принадлежат сервису/applicationContext.
-Flutter может быть уничтожен: callback фильтрует и сохраняет точки самостоятельно.
-Используется Google Play Services Location 21.3.0; нужен device/emulator с Google APIs.
+Путь координат: FusedLocationProviderClient → GpsFilter → TrackingStore
+(tracking_inbox.sqlite).
 
-Когда UI доступен: `NativeTrackImporter → RouteRepository → Drift transaction
-(location_points INSERT + sync_queue INSERT) → native ACK → Drift streams → Riverpod → UI`.
-Канал `field_inspector/tracking`: `startTracking`, `stopTracking`, `isTracking`,
-`readPoints` (до 200 записей), `ackPoints`, `requestNotificationPermission`.
-EventChannel не нужен: pull раз в 2 секунды и при resume читает durable inbox.
-UI не рисует точки из ответа канала; карта/статистика по-прежнему читают Drift.
+Сервис запускается независимо от Activity/FlutterEngine: Foreground Service
+с типом location и stopWithTask=false. SQLite и HandlerThread принадлежат сервису
+и applicationContext. Даже после уничтожения Flutter обратный вызов самостоятельно
+фильтрует и сохраняет точки. Используется Google Play Services Location 21.3.0;
+нужно устройство или эмулятор с Google APIs.
 
-Выбран отдельный журнал вместо второго прямого writer в Drift: Kotlin не зависит
-от generated Drift schema/migrations и не обходит invalidation reactive streams.
-До импорта журнал является durable входящей очередью, после импорта данные приложения
-находятся в Drift. Поэтому во время отсутствия Flutter серверная sync_queue ещё не
-пополняется; отправка накопленного трека начинается после возвращения в приложение.
-Сам сбор GPS не зависит ни от импорта, ни от сети.
+Когда интерфейс доступен, NativeTrackImporter передаёт точки в RouteRepository:
+транзакция Drift добавляет location_points и sync_queue, затем подтверждается
+перенос из платформенной очереди. Потоки Drift обновляют Riverpod и интерфейс.
+
+Канал field_inspector/tracking предоставляет startTracking, stopTracking,
+isTracking, readPoints (до 200 записей), ackPoints и requestNotificationPermission.
+EventChannel не нужен: очередь читается раз в 2 секунды и при возвращении
+в приложение. Карта и статистика читают Drift, а не ответ канала напрямую.
+
+Отдельный журнал освобождает Kotlin от зависимости от сгенерированной схемы
+и миграций Drift и сохраняет уведомления реактивных потоков.
+До импорта точки надёжно хранятся во входящей очереди, после — в Drift.
+Без Flutter исходящая sync_queue ещё не пополняется: отправка накопленного
+маршрута начинается при возвращении в приложение. Сбор GPS не зависит от сети.
 
 Гарантии переноса:
-- UUID точки генерируется Kotlin и не меняется при повторной доставке.
-- Native SQLite атомарно записывает точку, baseline фильтра и счётчик notification.
-- Native ACK удаляет только подтверждённые ID **после** успешного Drift commit.
-- Сбой до commit оставляет batch в inbox. Сбой после commit до ACK даёт повтор;
-  repository пропускает существующие ID и не создаёт повторную queue operation,
-  даже если предыдущая операция уже синхронизирована с сервером.
-- Stop ACK — барьер записи: новые callbacks блокируются, предыдущие записи закончены.
-  Затем Flutter импортирует остаток и завершает route. При ошибке его можно завершить повторно.
-- SQLite ошибки сохраняют необработанный inbox для retry; не выполняется destructive reset.
 
-Существующая Drift v4 не менялась. Native inbox имеет отдельную версию 1;
-будущие его миграции должны сохранять pending точки. Все ранее записанные Dart-точки остаются.
+- UUID точки создаётся в Kotlin и сохраняется при повторной доставке.
+- SQLite платформы атомарно записывает точку, базу фильтра и счётчик уведомления.
+- Подтверждение удаляет только перенесённые идентификаторы после фиксации Drift.
+- Сбой до фиксации оставляет пакет в очереди. Сбой между фиксацией и подтверждением
+  даёт повтор: репозиторий пропускает известные идентификаторы без повторной
+  исходящей операции, даже если сервер уже подтвердил предыдущую.
+- Подтверждение остановки — барьер записи: новые вызовы блокируются, прежние записи
+  завершаются. Затем Flutter импортирует остаток и завершает обход.
+  После ошибки завершение можно повторить.
+- Ошибка SQLite оставляет очередь для повтора; разрушительного сброса нет.
 
-## Фильтрация и lifecycle
+Для этого механизма схема Drift v4 не менялась. Платформенная очередь имеет
+отдельную версию 1; её будущие миграции должны сохранять ожидающие точки.
+Ранее записанные точки Dart остаются.
 
-GpsFilter (чистый Kotlin) повторяет domain LocationPointFilter Dart: accuracy >50 м,
-движение <5 м, невалидные значения/время, скорость по Haversine >15 м/с отбрасываются.
-Reported speed хранится отдельно. Радиус Земли одинаков: 6371008.8 м.
-Последний принятый fix и счётчик переживают native ACK. Время нормализовано до секунды
-для совместимости с Drift. Повтор timestamp не принимается даже после restart.
-Старые fixes (>30 секунд по elapsedRealtime) не записываются.
+## Фильтрация и жизненный цикл
 
-Обычный Home, блокировка экрана, пересоздание Activity и навигация Flutter не меняют
-segmentId и не останавливают сервис. Новый экземпляр сервиса создаёт новый участок,
-чтобы не соединять неизвестный промежуток после завершения процесса. Polyline и
-расстояние берутся из сохранённых сегментов. Длительность включает календарные паузы.
-Geolocator остаётся источником текущей позиции для UI/Check-in, но больше НЕ пишет трек.
+Чистый Kotlin GpsFilter повторяет правила Dart LocationPointFilter:
+точность хуже 50 м, движение меньше 5 м, неверные значения или время,
+расчётная скорость по Haversine больше 15 м/с приводят к отбрасыванию точки.
+Сообщённая GPS скорость хранится отдельно. Радиус Земли одинаков: 6371008,8 м.
 
-## Permissions и ограничения Android
+Последняя принятая точка и счётчик переживают подтверждение и удаление очереди.
+Время нормализовано до секунды для совместимости с Drift. Повтор одной отметки
+времени не принимается и после перезапуска. Координаты старше 30 секунд
+по elapsedRealtime не записываются.
 
-- Manifest: COARSE/FINE_LOCATION, FOREGROUND_SERVICE, FOREGROUND_SERVICE_LOCATION,
-  POST_NOTIFICATIONS. Сервис exported=false, foregroundServiceType=location.
-- Запуск из видимой Activity: точное while-in-use permission запрашивает общий location
-  layer, Kotlin проверяет его повторно. Approximate разрешение недостаточно для политики 50м:
-  выберите «Точное местоположение» в настройках приложения.
-- Android 8+: notification channel LOW; immutable PendingIntent открывает приложение.
-- Android 12+: не запускаем FGS из фона. Android 14+ повторно проверяет while-in-use access
-  при startForeground; отказ возвращается через MethodChannel, без crash-loop.
-- Android 13+: запрашивается POST_NOTIFICATIONS. Отказ не запрещает FGS, но Android может
-  скрыть уведомление из шторки, оставив сервис в Task Manager. Чтобы видеть счётчик,
-  разрешите уведомления в настройках. Обход не требует ACCESS_BACKGROUND_LOCATION:
-  он запускается с экрана приложения и продолжается в location foreground service.
-- Отзыв разрешения: регистрация/периодическая проверка прекращают подписку; исправьте
-  permission и нажмите «Возобновить tracking». Выключенный GPS отображается как ожидание.
-- START_STICKY просит Android восстановить сервис с durable routeId, но не гарантирует
-  непрерывность после убийства процесса, OEM-ограничений, force-stop или Task Manager Stop.
-  При возвращении восстановятся маршрут и inbox; остановленный сервис запускается явно
-  кнопкой «Возобновить tracking». Нет автоматического запуска после перезагрузки телефона.
-- Выключенный экран поддерживается FGS + Fused updates. Частота (запрос 5с, минимум 2с)
-  не гарантирована Android/Doze/OEM. Принудительный wakelock и обход battery restrictions
-  не добавлены. Для длительных полевых тестов проверьте режим батареи производителя.
+Переход на главный экран, блокировка, пересоздание Activity и навигация Flutter
+не меняют segmentId и не останавливают сервис. Новый экземпляр сервиса создаёт
+новый сегмент, чтобы не соединять неизвестный промежуток после завершения процесса.
+Линия и расстояние вычисляются по сохранённым сегментам. Длительность включает паузы.
+Geolocator обслуживает карту и отметки о посещении, но не записывает маршрут.
 
-Официальные основания:
-[Location FGS](https://developer.android.com/develop/background-work/services/fgs/service-types#location),
-[background start restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start),
-[notification permission](https://developer.android.com/develop/ui/compose/notifications/notification-permission),
-[user Stop](https://developer.android.com/develop/background-work/services/fgs/handle-user-stopping).
+## Разрешения и ограничения Android
+
+- В манифесте: ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION, FOREGROUND_SERVICE,
+  FOREGROUND_SERVICE_LOCATION, POST_NOTIFICATIONS. Сервис имеет exported=false
+  и foregroundServiceType=location.
+- Запуск из видимой Activity: общий слой геолокации запрашивает точное разрешение
+  на время использования, Kotlin проверяет его повторно. Приблизительных координат
+  недостаточно для порога 50 м: выберите «Точное местоположение».
+- Android 8+: канал уведомлений уровня LOW. Неизменяемый PendingIntent открывает приложение.
+- Android 12+: FGS не запускается из фона. Android 14+ повторно проверяет доступ
+  при startForeground. Отказ возвращается через MethodChannel без циклических сбоев.
+- Android 13+: отказ в POST_NOTIFICATIONS не запрещает FGS, но может скрыть
+  уведомление из шторки, оставив сервис в диспетчере задач. Для видимого счётчика
+  разрешите уведомления. ACCESS_BACKGROUND_LOCATION не требуется: сервис начинается
+  на экране приложения и затем продолжает запись.
+- При отзыве доступа проверка прекращает подписку. Восстановите разрешение и нажмите
+  «Возобновить запись маршрута». Выключенный GPS отображается как ожидание.
+- START_STICKY запрашивает восстановление с сохранённым routeId, но не гарантирует
+  непрерывность после завершения процесса, ограничений производителя или остановки
+  пользователем. При возвращении восстанавливаются обход и очередь; сервис запускается
+  явно кнопкой «Возобновить запись маршрута». Автозапуска после перезагрузки нет.
+- FGS и FusedLocationProviderClient поддерживают запись при выключенном экране.
+  Запрашиваемый интервал 5 с, минимальный 2 с не гарантируются Android/Doze
+  и производителем. Принудительная блокировка сна и обход ограничений батареи
+  не добавлены; режим энергосбережения проверяйте на устройстве.
+
+Официальная документация:
+[сервис геолокации](https://developer.android.com/develop/background-work/services/fgs/service-types#location),
+[ограничения запуска из фона](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start),
+[разрешение уведомлений](https://developer.android.com/develop/ui/compose/notifications/notification-permission),
+[остановка пользователем](https://developer.android.com/develop/background-work/services/fgs/handle-user-stopping).
 
 ## Проверка на Android
 
-```powershell
+~~~powershell
 flutter build apk --debug
 flutter analyze
 flutter test
-# Из android/, JAVA_HOME должен указывать на JDK Android Studio:
+# Из android/; JAVA_HOME должен указывать на JDK Android Studio:
 .\gradlew.bat :app:testDebugUnitTest
-```
+~~~
 
-В этой Windows-конфигурации incremental Kotlin compilation отключена: Pub cache C:
-и checkout F: ломают относительные пути incremental cache. Build warnings legacy KGP
-исходят из существующих Flutter plugins; обновление их toolchain не входит в tracking.
+В Windows инкрементальная компиляция Kotlin отключена: кэш Pub и проект могут
+находиться на разных дисках, что нарушает относительные пути кэша компилятора.
+Предупреждения сборки о KGP могут исходить из существующих плагинов Flutter;
+версия инструментария описана в корневом README.
 
-Установка и ручной сценарий (если подключено несколько устройств, добавьте `-s <serial>`):
+Установка и ручной сценарий; при нескольких устройствах добавьте -s <serial>:
 
-```powershell
+~~~powershell
 adb install -r build/app/outputs/flutter-apk/app-debug.apk
 adb shell am start -n com.klochkov.workingwithmaps/.MainActivity
 adb logcat -s FieldTracking:I AndroidRuntime:E ActivityManager:I
-```
+~~~
 
-1. Начать обход с точной геолокацией и уведомлениями. На улице пройти 50–100 м:
-   проверить notification, счётчик/Polyline и статистику. В помещении accuracy может
-   быть >50 м — отсутствие сохранённых точек в таком случае ожидаемо.
-2. Home, затем выключить экран на 3–5 минут и продолжить движение. Notification
-   count/Logcat должны расти. Открыть приложение — backlog импортируется без разрыва
-   сегмента на границе сворачивания. Повторный resume не создаёт дубликаты.
-3. Удалить Activity из Recents во время обхода (не нажимать Android Stop). Сервис
-   должен продолжить работу, если OEM не завершает процесс. Запустить приложение:
-   восстановится тот же route и накопленные точки. «Don't keep activities» в Developer
-   options помогает проверить уничтожение Activity отдельно от остановки всего app.
-4. Завершить обход: уведомление исчезает, новые точки не сохраняются. Повторить
-   старт/стоп, проверить отсутствие двух одновременных подписок.
-5. Проверить отказ/постоянный отказ/approximate location, отключение GPS,
-   запрет уведомлений, отзыв permission и восстановление через настройки.
-6. Отключить интернет: service/inbox/Drift продолжают работать. После возврата сети
-   и приложения точки поступают в sync_queue и проходят существующий SyncEngine.
+1. Начать обход с точной геолокацией и уведомлениями. Пройти 50–100 м на улице.
+   Проверить уведомление, счётчик, линию маршрута и статистику. В помещении
+   точность может быть хуже 50 м; отсутствие точек тогда ожидаемо.
+2. Перейти на главный экран, заблокировать устройство на 3–5 минут и продолжить
+   движение. Счётчик уведомления и журнал должны расти. При возвращении накопленные
+   точки импортируются без разрыва сегмента; повторное открытие не даёт дубликатов.
+3. Удалить Activity из недавних приложений во время обхода, не нажимая системную
+   остановку. Если производитель не завершил процесс, сервис продолжает работу.
+   Открытие восстанавливает тот же обход. Параметр разработчика
+   «Не сохранять действия» (Don't keep activities) проверяет уничтожение Activity
+   отдельно от остановки приложения.
+4. Завершить обход: уведомление исчезает, новые точки не записываются. Повторить
+   начало и завершение и проверить отсутствие двух подписок.
+5. Проверить отказ, постоянный отказ, приблизительные координаты, выключенный GPS,
+   запрет уведомлений, отзыв доступа и восстановление через настройки.
+6. Отключить интернет: сервис, очередь и Drift работают. После возвращения сети
+   и приложения точки попадают в sync_queue и обрабатываются SyncEngine.
 
 Полезные команды:
 
-```powershell
+~~~powershell
 adb shell dumpsys activity services com.klochkov.workingwithmaps
 adb shell dumpsys location
 adb shell dumpsys notification
@@ -130,24 +144,24 @@ adb shell dumpsys package com.klochkov.workingwithmaps
 adb shell input keyevent KEYCODE_HOME
 adb shell input keyevent KEYCODE_SLEEP
 adb shell input keyevent KEYCODE_WAKEUP
-# Осознанный тест остановки всего приложения — GPS после него не обязан продолжаться:
+# Остановка всего приложения: продолжение записи GPS после неё не гарантируется.
 adb shell am force-stop com.klochkov.workingwithmaps
-# Android 13+ Task Manager Stop simulation:
+# Имитация остановки из диспетчера задач Android 13+:
 adb shell cmd activity stop-app com.klochkov.workingwithmaps
-# Debug-only: наличие native inbox; смотреть таблицу points можно в Database Inspector.
+# Только при отладке: наличие входящей очереди; таблица points видна в Database Inspector.
 adb shell run-as com.klochkov.workingwithmaps ls databases
-```
+~~~
 
-Emulator: образ Google APIs/Google Play, Extended Controls → Location → Routes или
-GPX с walking speed. Либо одиночные точки (порядок longitude, latitude):
+Эмулятор: образ Google APIs/Google Play, меню Extended Controls → Location → Routes
+или GPX со скоростью ходьбы. Можно задавать одиночные точки; порядок — долгота, широта:
 
-```powershell
+~~~powershell
 adb emu geo fix 50.794591 61.659078
-# Подождите ≥5 секунд, затем переместитесь примерно на 10 м:
+# Подождите не менее 5 секунд, затем переместитесь примерно на 10 м:
 adb emu geo fix 50.794751 61.659078
-```
+~~~
 
-Не делайте большие мгновенные телепортации: фильтр скорости корректно их отбрасывает.
-Unit tests проверяют Kotlin-фильтр, Drift rollback, lost ACK, replay после удалённой
-синхронизации и сохранение recorder при disposal ProviderContainer. Эти tests не
-заменяют проверку реального GPS, battery policy и системных диалогов на устройстве.
+Большие мгновенные перемещения фильтр скорости правильно отбрасывает.
+Тесты проверяют Kotlin-фильтр, откат Drift, потерю подтверждения, повтор после
+серверной синхронизации и сохранение записи при освобождении ProviderContainer.
+Они не заменяют проверку реального GPS, батареи и системных диалогов.

@@ -82,7 +82,7 @@ void main() {
       expect((await engine().run()).succeeded, 1);
       expect(server.requests.single['name'], 'C');
       expect(server.requests.single['serverVersion'], 4);
-      await edit('D'); // same old form with v4; repository must preserve ACK v5
+      await edit('D'); // Та же старая форма с v4; репозиторий должен сохранить подтверждённую v5.
       expect((await engine().run()).succeeded, 1);
       expect(server.requests.last['serverVersion'], 5);
       expect(server.applied, 2);
@@ -140,7 +140,7 @@ void main() {
       expect(server.keys[1], frozen.operationId);
       expect((await conflict()).serverVersion, 6);
       expect((await conflict()).localVersion, 5);
-      expect(server.applied, 1); // replay did not overwrite external state
+      expect(server.applied, 1); // Повтор не перезаписал внешнее состояние.
     },
   );
 

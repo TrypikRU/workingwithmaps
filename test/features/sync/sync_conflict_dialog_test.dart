@@ -58,8 +58,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Локальная версия: 4'), findsOneWidget);
       expect(find.text('Серверная версия: 5'), findsOneWidget);
-      expect(find.textContaining('"name": "Local"'), findsWidgets);
-      expect(find.textContaining('"name": "Server"'), findsWidgets);
+      expect(find.textContaining('"Название": "Local"'), findsWidgets);
+      expect(find.textContaining('"Название": "Server"'), findsWidgets);
       await tester.tap(find.text('Повторить локальную'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);

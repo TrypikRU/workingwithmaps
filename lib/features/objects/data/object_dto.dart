@@ -60,7 +60,7 @@ extension ObjectDtoMapper on ObjectDto {
 }
 
 extension TechnicalObjectDtoMapper on TechnicalObject {
-  // Domain не придумывает серверное время: его явно передаёт data-слой.
+  // Модель предметной области не придумывает серверное время: его явно передаёт слой данных.
   ObjectDto toDto({required DateTime updatedAt}) => ObjectDto(
     id: id,
     name: name,

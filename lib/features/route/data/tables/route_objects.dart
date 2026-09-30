@@ -6,7 +6,7 @@ import 'routes.dart';
 class RouteObjects extends Table {
   TextColumn get routeId => text().references(Routes, #id)();
   TextColumn get objectId => text().references(TechnicalObjects, #id)();
-  // Drift DSL: CHECK ссылается на колонку, getter переопределяется генератором.
+  // Drift DSL: CHECK ссылается на столбец, метод чтения свойства переопределяется генератором.
   // ignore: recursive_getters
   IntColumn get position => integer().check(position.isBiggerOrEqualValue(0))();
 

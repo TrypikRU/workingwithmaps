@@ -10,7 +10,7 @@ enum ObjectStatus { planned, visited, error }
 enum ObjectPriority { low, normal, high, critical }
 
 /// Модель не зависит от Drift/Dio: детали хранения не попадают в UI.
-/// JSON модели не является контрактом backend: API использует отдельный ObjectDto.
+/// JSON модели не является контрактом сервера: API использует отдельный ObjectDto.
 @freezed
 abstract class TechnicalObject with _$TechnicalObject {
   const factory TechnicalObject({

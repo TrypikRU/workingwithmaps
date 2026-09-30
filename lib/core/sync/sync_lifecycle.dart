@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'sync_providers.dart';
 import '../database/database_provider.dart';
 
-/// Только точка запуска приложения. Сам SyncEngine не знает о Flutter lifecycle.
-/// Таймер работает лишь в foreground; due timestamps остаются в SQLite.
+/// Только точка запуска приложения. Сам SyncEngine не знает о жизненном цикле Flutter.
+/// Таймер работает лишь в открытом приложении; сроки отправки остаются в SQLite.
 class SyncLifecycle extends ConsumerStatefulWidget {
   const SyncLifecycle({super.key, required this.child});
   final Widget child;

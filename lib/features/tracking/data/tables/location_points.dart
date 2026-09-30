@@ -5,13 +5,13 @@ import '../../../route/data/tables/routes.dart';
 
 @TableIndex(name: 'location_points_route_time', columns: {#routeId, #timestamp})
 class LocationPoints extends Table {
-  // Новый foreground-сеанс не соединяется с предыдущим через фоновый разрыв.
+  // Новый сеанс записи не соединяется с предыдущим через разрыв в фоне.
   TextColumn get segmentId => text().nullable()();
   TextColumn get id => text()();
   TextColumn get routeId => text().references(Routes, #id)();
   RealColumn get latitude => real()();
   RealColumn get longitude => real()();
-  // Drift DSL: CHECK ссылается на колонку, getter переопределяется генератором.
+  // Drift DSL: CHECK ссылается на столбец, метод чтения свойства переопределяется генератором.
   // ignore: recursive_getters
   RealColumn get accuracy => real().check(accuracy.isBiggerOrEqualValue(0))();
   // GPS может не сообщить скорость. Отсутствие значения не равно нулю.

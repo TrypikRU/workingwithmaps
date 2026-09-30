@@ -5,9 +5,11 @@ import kotlin.math.*
 data class GpsFix(val latitude: Double, val longitude: Double, val accuracy: Double,
                   val speed: Double?, val timestamp: Long)
 
-/** Чистый Kotlin domain filter; UI, Android Location и Play Services здесь не нужны.
- * Политика совпадает с Dart LocationPointFilter: база — последняя ПРИНЯТАЯ точка.
- * Reported speed сохраняем, но скорость выброса вычисляем сами по Haversine. */
+/**
+ * Чистый фильтр предметной области на Kotlin; интерфейс, Android Location и Play Services не
+ * нужны. Правила совпадают с Dart LocationPointFilter: база — последняя ПРИНЯТАЯ точка.
+ * Сообщённую скорость сохраняем, а скорость выброса вычисляем по Haversine.
+ */
 class GpsFilter(private val maxAccuracy: Double = 50.0,
                 private val minDistance: Double = 5.0, private val maxSpeed: Double = 15.0) {
     fun accepts(current: GpsFix, previous: GpsFix?): Boolean {

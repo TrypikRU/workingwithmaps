@@ -5,7 +5,7 @@ namespace FieldInspector.Api;
 
 public sealed record ObjectDto(string Id, string Name, string Address, double Latitude,
     double Longitude, ObjectStatus Status, ObjectPriority Priority, DateTimeOffset UpdatedAt, long ServerVersion);
-// Полный набор редактируемых полей; geometry пока остаётся локальной.
+// Полный набор редактируемых полей; геометрия пока остаётся локальной.
 public sealed record ObjectPatchRequest(string Id, string Name, string Address, double Latitude,
     double Longitude, ObjectStatus Status, ObjectPriority Priority, long? ServerVersion);
 public sealed record RouteDto(string Id, string Name, DateOnly Date, RouteStatus Status,

@@ -34,7 +34,7 @@ class MapScreen extends ConsumerWidget {
         title: const Text('Карта'),
         actions: [
           IconButton(
-            tooltip: 'Offline-карта',
+            tooltip: 'Офлайн-карта',
             icon: const Icon(Icons.download_for_offline_outlined),
             onPressed: () => showDialog<void>(
               context: context,
@@ -50,7 +50,9 @@ class MapScreen extends ConsumerWidget {
             const LocationStatusPanel(),
             if (offline.hasPack || offline.offlineOnly)
               Text(
-                offline.offlineOnly ? 'Только offline · Покровка · zoom 13–16' : 'Offline-регион сохранён · вне покрытия используется сеть',
+                offline.offlineOnly
+                    ? 'Только офлайн · Покровка · масштаб 13–16'
+                    : 'Офлайн-регион сохранён · вне покрытия используется сеть',
               ),
             if (nearby != null)
               Padding(

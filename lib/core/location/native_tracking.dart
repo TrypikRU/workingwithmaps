@@ -55,7 +55,7 @@ class TrackingFailure implements Exception {
   String toString() => message;
 }
 
-/// Durable pull/ACK transport. Events alone would lose fixes when Flutter is absent.
+/// Надёжная передача через чтение и подтверждение. Одни события потеряли бы координаты при отсутствии Flutter.
 abstract interface class NativeTracking {
   Future<bool> requestNotificationPermission();
   Future<void> startTracking(String routeId);
@@ -75,10 +75,10 @@ class AndroidNativeTracking implements NativeTracking {
     try {
       return await _channel.invokeMethod<T>(method, arguments);
     } on PlatformException catch (error) {
-      throw TrackingFailure(error.message ?? 'Ошибка Android tracking');
+      throw TrackingFailure(error.message ?? 'Ошибка записи маршрута');
     } on MissingPluginException {
       throw const TrackingFailure(
-        'Нативный tracking доступен только в Android-сборке',
+        'Запись маршрута доступна только в приложении для Android',
       );
     }
   }

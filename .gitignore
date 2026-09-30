@@ -1,4 +1,4 @@
-# Miscellaneous
+# Разное
 *.class
 *.log
 *.pyc
@@ -12,18 +12,18 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# Файлы IntelliJ
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# Каталог .vscode содержит настройки запуска и задачи VS Code.
+# Их может потребоваться хранить в системе контроля версий, поэтому
+# правило ниже по умолчанию закомментировано.
 #.vscode/
 
-# Flutter/Dart/Pub related
+# Файлы Flutter/Dart/Pub
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -34,25 +34,25 @@ migrate_working_dir/
 /coverage/
 /audit-flutter-test.log
 
-# Symbolication related
+# Файлы символов для расшифровки стека вызовов
 app.*.symbols
 
-# Obfuscation related
+# Файлы сопоставления после обфускации
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android Studio размещает результаты сборки здесь
 /android/.kotlin/
 /android/app/debug
 /android/app/profile
 /android/app/release
 
-# Local ASP.NET test backend
+# Локальный тестовый сервер ASP.NET
 /backend/.tools/
 /backend/.tmp/
 /backend/**/bin/
 /backend/**/obj/
 /backend/**/Data/*.sqlite*
 
-# Locally prepared offline tile packs
+# Локально подготовленные пакеты офлайн-карт
 /tools/offline_maps/output/
 /tools/offline_maps/__pycache__/

@@ -25,6 +25,8 @@ Marker buildObjectMarker(
           '${object.name} — ${object.status.label}, приоритет: ${object.priority.label}',
       child: Material(
         color: object.status.color,
+        // Рамка маркера должна оставаться под значком приоритета.
+        borderOnForeground: false,
         shape: CircleBorder(
           side: BorderSide(
             color: focused ? Colors.amber : Colors.white,

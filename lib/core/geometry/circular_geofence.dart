@@ -3,7 +3,7 @@ import 'geo_point.dart';
 
 enum GeofenceState { outside, approaching, inside }
 
-/// Geometry only: permission, freshness and GPS accuracy belong to the caller.
+/// Только геометрия: разрешение, актуальность и точность GPS проверяет вызывающая сторона.
 class CircularGeofence {
   CircularGeofence({
     required this.center,

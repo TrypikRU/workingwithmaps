@@ -12,8 +12,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false)));
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options => options.SwaggerDoc("v1", new() { Title = "Field Inspector test API", Version = "v1" }));
-// Swagger must use the same string enums as Minimal API request/response JSON.
+builder.Services.AddSwaggerGen(options => options.SwaggerDoc("v1", new() { Title = "Полевой инспектор — тестовый API", Version = "v1" }));
+// Swagger использует те же строковые перечисления, что JSON запросов и ответов Minimal API.
 builder.Services.AddSingleton<ISerializerDataContractResolver>(services =>
     new JsonSerializerDataContractResolver(services.GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions));
 builder.Services.AddSingleton<SyncGate>();
@@ -23,7 +23,7 @@ var connection = new SqliteConnectionStringBuilder { DataSource = databasePath, 
 builder.Services.AddDbContext<InspectorDbContext>(options => options.UseSqlite(connection));
 
 var app = builder.Build();
-// Binding errors (malformed JSON/query) remain client errors in Development too.
+// Ошибки привязки некорректного JSON или параметров запроса остаются клиентскими и в Development.
 app.UseExceptionHandler(new ExceptionHandlerOptions
 {
     StatusCodeSelector = error => error is BadHttpRequestException badRequest

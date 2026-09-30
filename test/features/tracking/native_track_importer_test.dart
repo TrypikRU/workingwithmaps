@@ -28,7 +28,7 @@ void main() {
     expect(await db.select(db.syncQueue).get(), hasLength(2));
     await db
         .delete(db.syncQueue)
-        .go(); // Simulates an already acknowledged remote queue.
+        .go(); // Имитируем исходящую очередь, уже подтверждённую сервером.
     native.failAck = false;
     await importer.drain();
     expect(native.inbox, isEmpty);
@@ -61,9 +61,7 @@ void main() {
       expect(await db.select(db.locationPoints).get(), isEmpty);
       expect(native.inbox, hasLength(1));
       await db.customStatement('DROP TRIGGER fail_queue');
-      await repository.finish(
-        id,
-      ); // Late import after UI restart/end is still valid.
+      await repository.finish(id); // Поздний импорт после перезапуска интерфейса или завершения обхода допустим.
       await NativeTrackImporter(native, repository).drain();
       expect(native.inbox, isEmpty);
       expect((await repository.watchCurrent().first)!.points, hasLength(1));

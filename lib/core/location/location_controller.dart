@@ -43,7 +43,7 @@ class LocationController extends Notifier<LocationState> {
     _foreground = true;
     final monitor = ++_monitorGeneration;
     // Статус сервиса наблюдается даже при denied: после включения GPS
-    // повторно проверяем доступ, но сами не открываем permission dialog.
+    // повторно проверяем доступ, но сами не открываем диалог разрешения.
     _services = _service.watchServiceEnabled().listen(
       (enabled) {
         if (_disposed || !_foreground || monitor != _monitorGeneration) return;
@@ -88,8 +88,8 @@ class LocationController extends Notifier<LocationState> {
 
   Future<void> refresh({bool requestPermission = false}) async {
     if (!_foreground || _disposed) return;
-    // Нельзя отменить каждый platform Future, поэтому поколение блокирует
-    // запоздалый ответ после pause, отключения GPS или нового запроса.
+    // Нельзя отменить каждый платформенный Future, поэтому поколение блокирует
+    // запоздалый ответ после приостановки, отключения GPS или нового запроса.
     final generation = ++_generation;
     final previous = state.position;
     state = LocationState(
@@ -111,7 +111,7 @@ class LocationController extends Notifier<LocationState> {
       if (!_active(generation)) return;
       if (access == LocationAccess.denied && requestPermission) {
         // Диалог открываем только по кнопке. deniedForever требует настроек;
-        // resume во время диалога присоединяется к тому же Future.
+        // возобновление приложения во время диалога присоединяется к тому же Future.
         final pending = _permissionRequest ??= _service.requestPermission();
         try {
           access = await pending;
@@ -156,8 +156,8 @@ class LocationController extends Notifier<LocationState> {
         cancelOnError: true,
       );
 
-      // Кэш — только временная подсказка, не свежий fix. Его ошибка не мешает
-      // основному запросу; поздний кэш не должен затереть stream update.
+      // Кэш — только временная подсказка, не свежие координаты. Его ошибка не мешает
+      // основному запросу; поздний кэш не должен затереть обновление потока.
       unawaited(_loadLastKnown(generation, () => receivedLive));
       try {
         final position = await _service.getCurrentPosition();
@@ -166,7 +166,7 @@ class LocationController extends Notifier<LocationState> {
           _publish(position);
         }
       } catch (error) {
-        // Если stream уже дал координаты, timeout одиночного запроса не ошибка UI.
+        // Если поток уже дал координаты, превышение времени одиночного запроса не считается ошибкой интерфейса.
         if (!receivedLive) await _handleError(error, generation);
       }
     } catch (error) {
@@ -188,7 +188,7 @@ class LocationController extends Notifier<LocationState> {
         );
       }
     } catch (_) {
-      // Отсутствующий или недоступный platform cache не блокирует свежий GPS fix.
+      // Отсутствующий или недоступный кэш платформы не блокирует свежие координаты GPS.
     }
   }
 
@@ -208,8 +208,8 @@ class LocationController extends Notifier<LocationState> {
     final previous = state.position;
     await _stopPositions();
     if (!_active(failedGeneration)) return;
-    // Разрешение может быть отозвано и GPS выключен во время stream.
-    // Перепроверка отличает эти ситуации от произвольной platform-ошибки.
+    // Разрешение может быть отозвано и GPS выключен во время работы потока.
+    // Перепроверка отличает эти ситуации от произвольной ошибки платформы.
     var status = LocationStatus.error;
     try {
       if (!await _service.isServiceEnabled()) {

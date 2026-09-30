@@ -7,7 +7,7 @@ import '../../../core/geometry/circular_geofence.dart';
 import '../../../core/geometry/geo_point.dart';
 import '../domain/technical_object.dart';
 
-/// Детали SQL и преобразование Drift rows остаются внутри data-слоя.
+/// Детали SQL и преобразование строк Drift остаются внутри слоя данных.
 class DriftObjectsDataSource {
   DriftObjectsDataSource(this._database);
 
@@ -23,7 +23,7 @@ class DriftObjectsDataSource {
     )..where((row) => row.entityType.equals('object'))).get();
     final protectedIds = pending.map((row) => row.entityId).toSet();
     // До отправки визита сервер ещё может вернуть planned. Не теряем локальный
-    // visited при ручном refresh до подтверждения визита SyncEngine.
+    // visited при ручном обновлении до подтверждения посещения SyncEngine.
     final localVisits = await _database.select(_database.visits).get();
     protectedIds.addAll(
       localVisits
@@ -57,14 +57,14 @@ class DriftObjectsDataSource {
             priority: Value(object.priority),
             serverVersion: Value(object.serverVersion),
             updatedAt: Value(record.updatedAt),
-            // API has no geometry contract yet. Absent values preserve locally
-            // stored polygon/radius during refresh (new rows receive defaults).
+            // API пока не содержит контракта геометрии. При отсутствии значений обновление сохраняет
+            // локальные polygon/radius; новые строки получают значения по умолчанию.
           ),
         ]);
       }
     });
     // Загрузка с сервера не создаёт исходящих операций. Отсутствующие в ответе
-    // записи не удаляем: контракт ещё не содержит tombstones удалённых объектов.
+    // записи не удаляем: контракт ещё не содержит отметок удалённых объектов.
   });
 
   Stream<List<TechnicalObject>> watchObjects() {
@@ -93,40 +93,39 @@ class DriftObjectsDataSource {
     );
   }
 
-  Future<void> saveObject(TechnicalObject object) => _database.transaction(
-    () async {
-      CircularGeofence(
-        center: GeoPoint(object.latitude, object.longitude),
-        radius: object.geofenceRadius,
-      );
-      final now = DateTime.now().toUtc();
-      // UI может редактировать старый snapshot после ACK. Версию сервера берём
-      // из текущей БД, а не откатываем её значением из формы редактирования.
-      final existing = await (_database.select(
-        _database.technicalObjects,
-      )..where((o) => o.id.equals(object.id))).getSingleOrNull();
-      await _database
-          .into(_database.technicalObjects)
-          .insertOnConflictUpdate(
-            TechnicalObjectsCompanion.insert(
-              id: object.id,
-              name: object.name,
-              address: Value(object.address),
-              latitude: object.latitude,
-              longitude: object.longitude,
-              status: Value(object.status),
-              priority: Value(object.priority),
-              serverVersion: Value(
-                existing?.serverVersion ?? object.serverVersion,
+  Future<void> saveObject(TechnicalObject object) =>
+      _database.transaction(() async {
+        CircularGeofence(
+          center: GeoPoint(object.latitude, object.longitude),
+          radius: object.geofenceRadius,
+        );
+        final now = DateTime.now().toUtc();
+        // Интерфейс может редактировать старый снимок после подтверждения. Версию сервера берём
+        // из текущей БД, а не откатываем её значением из формы редактирования.
+        final existing = await (_database.select(
+          _database.technicalObjects,
+        )..where((o) => o.id.equals(object.id))).getSingleOrNull();
+        await _database
+            .into(_database.technicalObjects)
+            .insertOnConflictUpdate(
+              TechnicalObjectsCompanion.insert(
+                id: object.id,
+                name: object.name,
+                address: Value(object.address),
+                latitude: object.latitude,
+                longitude: object.longitude,
+                status: Value(object.status),
+                priority: Value(object.priority),
+                serverVersion: Value(
+                  existing?.serverVersion ?? object.serverVersion,
+                ),
+                updatedAt: Value(now),
+                geofenceRadius: Value(object.geofenceRadius),
+                polygon: Value(object.polygon),
               ),
-              updatedAt: Value(now),
-              geofenceRadius: Value(object.geofenceRadius),
-              polygon: Value(object.polygon),
-            ),
-          );
-      // Нет состояния «объект сохранён, но операция синхронизации потеряна».
-      // Ошибка любой записи откатывает обе; HTTP в пути локальной записи отсутствует.
-      await enqueueObjectUpdate(_database, object.id, now);
-    },
-  );
+            );
+        // Нет состояния «объект сохранён, но операция синхронизации потеряна».
+        // Ошибка любой записи откатывает обе; HTTP в пути локальной записи отсутствует.
+        await enqueueObjectUpdate(_database, object.id, now);
+      });
 }

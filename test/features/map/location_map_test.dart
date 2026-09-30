@@ -42,8 +42,8 @@ Future<void> showApp(WidgetTester tester, FakeLocationService service) async {
 }
 
 Future<void> closeApp(WidgetTester tester) async {
-  // Drift откладывает освобождение query stream до следующей microtask/timer.
-  // Завершаем её до проверки Flutter test invariants, а не в позднем tearDown.
+  // Drift откладывает закрытие потока запросов до следующей микрозадачи или таймера.
+  // Завершаем его до проверки инвариантов Flutter, а не в позднем tearDown.
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpAndSettle();
 }

@@ -1,10 +1,10 @@
-# Field Inspector — тестовый API
+# Полевой инспектор — тестовый API
 
-Небольшой ASP.NET Core Web API (.NET 10) для проверки мобильной offline-first
-синхронизации. EF Core хранит Objects, Routes, Visits и LocationPoints в отдельной
-SQLite. Authentication отсутствует; мобильный SyncEngine отправляет визиты и точки,
-а UI продолжает читать Drift.
-Ручное обновление объектов из API уже доступно на карте и в списке Flutter.
+Небольшой ASP.NET Core Web API (.NET 10) для проверки синхронизации мобильного
+приложения с поддержкой работы без интернета. EF Core хранит Objects, Routes,
+Visits и LocationPoints в отдельной SQLite. Аутентификации нет.
+SyncEngine отправляет изменения, а интерфейс продолжает читать Drift.
+Ручное обновление объектов доступно на карте и в списке.
 
 ## Запуск
 
@@ -15,63 +15,68 @@ dotnet restore backend/FieldInspector.Api
 dotnet run --project backend/FieldInspector.Api --launch-profile http
 ```
 
-В текущем рабочем окружении SDK также установлен в игнорируемый `backend/.tools/dotnet`.
-Если `dotnet` отсутствует в PATH, используйте вместо него
-`& './backend/.tools/dotnet/dotnet.exe'`. Этот SDK не входит в исходники.
+В рабочем окружении SDK может также находиться в игнорируемом
+backend/.tools/dotnet. Если dotnet отсутствует в PATH, используйте
+& './backend/.tools/dotnet/dotnet.exe'. Этот SDK не входит в исходники.
 
-Swagger: http://127.0.0.1:5080/swagger (Try it out).
-OpenAPI: http://127.0.0.1:5080/swagger/v1/swagger.json.
-Профиль `http` включает Development, поэтому доступны debug-сбои.
+[Swagger](http://127.0.0.1:5080/swagger) позволяет выполнить запрос кнопкой Try it out.
+[OpenAPI](http://127.0.0.1:5080/swagger/v1/swagger.json).
+Профиль http включает Development и отладочные сбои.
 
-SQLite автоматически создаётся в `backend/FieldInspector.Api/Data/field-inspector.sqlite`.
-Пять объектов с такими же `demo-*` ID, как в Flutter, добавляются только при пустой
-таблице. При запуске создаётся тестовый обход на текущий день **UTC**, если его нет.
-После смены дня перезапустите API для создания нового обхода.
-Повторный запуск сохраняет визиты и точки. `Storage:Path` позволяет выбрать другую БД:
+SQLite создаётся в backend/FieldInspector.Api/Data/field-inspector.sqlite.
+Пять объектов с теми же идентификаторами demo-*, что во Flutter, добавляются только
+в пустую таблицу. При запуске создаётся тестовый обход на текущий день UTC,
+если его ещё нет. После смены дня перезапустите API для нового обхода.
+Посещения и точки сохраняются. Storage:Path задаёт другую БД:
 
 ```powershell
 dotnet run --project backend/FieldInspector.Api --launch-profile http -- --Storage:Path ../.tmp/test.sqlite
 ```
 
-Для минимального стенда используется EnsureCreated и additive upgrade существующей БД: при запуске добавляются Objects.ServerVersion и OperationReceipts, данные не удаляются. SQLite мобильного приложения мигрирует отдельно через Drift v6.
+Для локального стенда используются EnsureCreated и дополняющее обновление схемы:
+при запуске добавляются Objects.ServerVersion и OperationReceipts без удаления
+данных. База мобильного приложения мигрирует отдельно через Drift v6.
 
-## Android Emulator
+## Эмулятор Android
 
-Базовый URL: **http://10.0.2.2:5080/**. `10.0.2.2` — адрес loopback хоста
-из стандартного [Android Emulator](https://developer.android.com/studio/run/emulator-networking).
-На самом ПК используйте `127.0.0.1`. Сервер слушает только loopback.
+Базовый адрес — http://10.0.2.2:5080/. Адрес 10.0.2.2 даёт доступ к локальному
+интерфейсу компьютера из стандартного
+[Android Emulator](https://developer.android.com/studio/run/emulator-networking).
+На ПК используйте 127.0.0.1. Сервер слушает только локальный интерфейс.
 
 ```powershell
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5080/
 ```
 
-В debug Android Manifest разрешён cleartext HTTP для `10.0.2.2`, `127.0.0.1`
-и `localhost` (последние два — для `adb reverse` на физическом устройстве).
-Release-конфигурация не менялась. Кнопка обновления объектов вызывает GET /objects
-через Dio и repository, сохраняет ответ в Drift. UI обновляется через stream БД.
-SyncEngine отправляет очередь через PATCH /objects/{id}, POST /routes, POST /visits и POST /location/batch.
-Новый локальный обход сначала регистрируется через POST /routes.
-GET /sync и загрузка обходов пока автоматически не вызываются.
-Для физического телефона этот адрес не подходит.
+Отладочный Android Manifest разрешает незашифрованный HTTP для 10.0.2.2,
+127.0.0.1 и localhost; последние два подходят для adb reverse на устройстве.
+Выпускная конфигурация не меняется.
+Кнопка обновления получает GET /objects через Dio и репозиторий, сохраняет
+результат в Drift. Интерфейс обновляет поток БД.
+SyncEngine отправляет PATCH /objects/{id}, POST /routes, POST /visits
+и POST /location/batch. Новый обход сначала регистрируется через POST /routes.
+GET /sync и загрузка обходов автоматически не вызываются.
+Адрес 10.0.2.2 для физического телефона не подходит.
 
 ## Контракты и ручная проверка
 
-JSON использует camelCase, enum — строки. Время передаётся ISO 8601 с UTC/offset.
+JSON использует camelCase, перечисления — строки.
+Время передаётся в ISO 8601 с UTC или явным смещением.
 
-| Endpoint | Ответ / назначение |
+| Метод API | Ответ или назначение |
 | --- | --- |
-| `GET /objects` | Массив объектов: id, name, address, latitude, longitude, status, priority, updatedAt |
-| `GET /routes/today` | Массив обходов на день UTC: id, name, date, status, objectIds, updatedAt |
-| `POST /routes` | `{id, name, date: "2026-09-13"}`; 201 создание, 200 идентичный повтор, 409 тот же ID с другими данными |
-| `POST /visits` | 201 при создании, 200 при идентичном повторе; другой payload → 409; актуальные updatedAt и serverVersion |
-| `POST /location/batch` | `{inserted, existing, accepted}`; от 1 до 500 точек, атомарно |
-| `GET /sync?since=<timestamp>` | `{cursor, serverTime, objects, routes, visits, locationPoints}` |
+| GET /objects | Объекты: id, name, address, latitude, longitude, status, priority, updatedAt, serverVersion |
+| GET /routes/today | Обходы на день UTC: id, name, date, status, objectIds, updatedAt |
+| POST /routes | id, name, date; 201 — создание, 200 — идентичный повтор, 409 — тот же идентификатор с другими данными |
+| POST /visits | 201 — создание, 200 — идентичный повтор; другие данные дают 409; актуальные updatedAt и serverVersion |
+| POST /location/batch | inserted, existing, accepted; от 1 до 500 точек, атомарно |
+| GET /sync?since=… | cursor, serverTime, objects, routes, visits, locationPoints |
+
+Регистрация обхода неизменяема и идемпотентна по идентификатору, созданному
+клиентом. Она не меняет серверные active/completed: завершение пока сохраняется
+в Drift. Отладочные заголовки работают и для POST /routes.
 
 Примеры PowerShell:
-
-Регистрация локального обхода неизменяема и идемпотентна по client-generated ID.
-Она не меняет active/completed на сервере: завершение сейчас сохраняется в Drift.
-Debug-заголовки работают для POST /routes так же, как для остальных endpoints.
 
 ```powershell
 $api = 'http://127.0.0.1:5080'
@@ -89,42 +94,43 @@ $batch = @{ points = @(@{
   timestamp = [DateTimeOffset]::UtcNow.ToString('o')
 }) }
 Invoke-RestMethod "$api/location/batch" -Method Post -ContentType application/json -Body ($batch | ConvertTo-Json -Depth 5)
-# PowerShell 7.5+: preserve the timestamp string, including fractional seconds.
+# PowerShell 7.5+: сохраняем строку времени, включая доли секунды.
 $sync = curl.exe --silent "$api/sync" | ConvertFrom-Json -DateKind String
 Invoke-RestMethod ("$api/sync?since=" + [uri]::EscapeDataString($sync.cursor))
 ```
 
-Visit status: `completed` / `failed`. Object status: `planned` / `visited` / `error`;
-priority: `low` / `normal` / `high` / `critical`. Route status: `planned` / `active` / `completed`.
-POST визита со status=completed атомарно меняет статус объекта на visited.
+Статусы посещения: completed / failed. Объекта: planned / visited / error.
+Приоритеты: low / normal / high / critical. Обхода: planned / active / completed.
+POST посещения со status=completed атомарно меняет объект на visited.
 
-Клиент назначает стабильные ID до отправки. Повтор того же визита возвращает
-существующую запись без новой версии. Visits — неизменяемые события: другой payload даёт 409 с текущей записью в current, даже при совпадении serverVersion.
-Точки неизменяемы: повтор идентичной точки допустим, другой payload с тем же ID
-даёт 409 и откатывает весь пакет. Неизвестные связи и некорректные поля дают 400.
+Клиент назначает постоянные идентификаторы до отправки. Идентичный повтор посещения
+возвращает запись без новой версии. Посещения неизменяемы: другие данные дают 409
+с текущей записью в current, даже при совпадении serverVersion.
+Точки также неизменяемы: другой набор данных с прежним идентификатором даёт 409
+и откатывает весь пакет. Неизвестные связи и некорректные поля дают 400.
 
-Для первой синхронизации пропустите `since`. После успешного применения ответа
-сохраните **cursor**, передавайте его в следующий запрос без округления. Время
-клиента и `serverTime` не являются курсором. Курсор имеет микросекундную точность,
-совместимую с Dart DateTime. Сервер отдаёт текущие состояния изменённых записей,
-не журнал каждого события; удалений и пагинации пока нет.
+При первой синхронизации пропустите since. После применения ответа сохраните
+cursor и передавайте его без округления. Время клиента и serverTime курсором
+не являются. Микросекундная точность совместима с Dart DateTime.
+Сервер отдаёт текущие состояния изменённых записей, а не журнал каждого события.
+Удалений и постраничной выдачи пока нет.
 
 ## Искусственные ошибки
 
-Механизм включается только когда одновременно установлены Environment=Development
-и `DebugFaults:Enabled=true` (настроено в appsettings.Development.json).
-Каждый сбой относится только к одному запросу и выполняется **до записи данных**.
+Механизм работает только при Environment=Development и DebugFaults:Enabled=true
+(настроено в appsettings.Development.json). Сбой относится к одному запросу
+и возникает **до записи данных**.
 
-| Query | Эквивалентный header | Поведение |
+| Параметр запроса | Эквивалентный заголовок | Поведение |
 | --- | --- | --- |
-| `?debug=500` | `X-Debug-Fault: 500` | HTTP 500 Problem JSON |
-| `?debug=409` | `X-Debug-Fault: 409` | HTTP 409 Problem JSON |
-| `?debug=timeout` | `X-Debug-Fault: timeout` | Ожидание отмены клиентом; это не HTTP 408 |
-| `?debug=delay&delayMs=2000` | `X-Debug-Fault: delay`, `X-Debug-Delay-Ms: 2000` | Задержка, затем обычный endpoint |
+| ?debug=500 | X-Debug-Fault: 500 | HTTP 500 с JSON ошибки |
+| ?debug=409 | X-Debug-Fault: 409 | HTTP 409 с JSON ошибки |
+| ?debug=timeout | X-Debug-Fault: timeout | Ожидание отмены клиентом, не ответ HTTP 408 |
+| ?debug=delay&delayMs=2000 | X-Debug-Fault: delay; X-Debug-Delay-Ms: 2000 | Задержка, затем обычная обработка |
 
-Header имеет приоритет над query. Delay по умолчанию 2000 мс, диапазон 0–30000 мс.
-Неизвестный режим или неправильная задержка дают 400. Для timeout задавайте
-конечный receiveTimeout в Dio или `--max-time` в curl:
+Заголовок имеет приоритет. Задержка по умолчанию 2000 мс, диапазон 0–30000 мс.
+Неверный режим или задержка дают 400. Для проверки ожидания задайте конечный
+receiveTimeout в Dio или --max-time в curl:
 
 ```powershell
 curl.exe -i "$api/objects?debug=500"
@@ -133,12 +139,12 @@ curl.exe -i --max-time 2 "$api/objects?debug=timeout"
 curl.exe -i "$api/objects?debug=delay&delayMs=1500"
 ```
 
-Те же параметры работают на POST. Симуляция потери ответа **после commit** пока
-не предусмотрена; безопасный повтор можно проверить двойной отправкой POST.
+Параметры работают и на POST. Искусственная потеря ответа после фиксации пока
+не реализована; безопасный повтор можно проверить двойной отправкой POST.
 
 ## Проверки и структура
 
-При запущенном Development API, PowerShell **7.5+**:
+При запущенном API в Development, PowerShell 7.5+:
 
 ```powershell
 pwsh -File backend/scripts/Smoke-Test.ps1
@@ -146,40 +152,41 @@ pwsh -File backend/scripts/Smoke-Test.ps1
 pwsh -File backend/scripts/Smoke-Test.ps1 -BaseUrl http://127.0.0.1:5081
 ```
 
-Скрипт создаёт тестовые визиты/точки с уникальными ID. Используйте отдельный
-`Storage:Path`. Проверяет seed, идемпотентность, реальные конфликты версий,
-атомарность batch, delta/cursor, валидацию, Swagger и четыре искусственных сбоя.
+Скрипт создаёт тестовые посещения и точки с уникальными идентификаторами.
+Используйте отдельный Storage:Path. Проверяются начальные данные, идемпотентность,
+конфликты версий, атомарность пакета, изменения и курсор, проверка данных,
+Swagger и четыре искусственных сбоя.
 
-- `Program.cs` — DI, SQLite, Swagger и запуск seed.
-- `Data/` — четыре EF-сущности, связи/индексы, начальные данные.
-- `Contracts.cs` — HTTP DTO отдельно от сущностей хранения.
-- `ApiEndpoints.cs` — пять endpoint-ов, валидация и транзакционная запись.
-- `SyncGate.cs` — согласованный курсор и сериализация записи/sync snapshot в одном процессе.
-- `DebugFaultMiddleware.cs` — запросные искусственные сбои, отключённые вне Development.
+- Program.cs — DI, SQLite, Swagger и запуск начального заполнения.
+- Data/ — четыре сущности EF, связи, индексы и начальные данные.
+- Contracts.cs — HTTP DTO отдельно от сущностей хранения.
+- ApiEndpoints.cs — методы API, проверка и транзакционная запись.
+- SyncGate.cs — согласованный курсор, упорядоченная запись и чтение снимка изменений.
+- DebugFaultMiddleware.cs — искусственные сбои запросов, отключённые вне Development.
 
 API рассчитан на один локальный процесс. Не запускайте несколько экземпляров
-с одним файлом SQLite и не меняйте БД внешним редактором во время работы:
-единый gate защищает границу cursor/commit только внутри этого процесса.
+с одной SQLite и не меняйте её внешним редактором во время работы:
+общая блокировка защищает границу курсора и фиксации только внутри процесса.
 
 ## Версии объектов и конфликты
 
-`GET /objects` и `GET /objects/{id}` возвращают serverVersion (начинается с 1).
-`GET /visits/{id}` позволяет обновить snapshot конфликта вручную.
-`PATCH /objects/{id}` принимает id, name, address, latitude, longitude, status,
-priority, serverVersion и обязательный header `Idempotency-Key` (уникальная строка
-до 100 символов). Объект должен уже существовать; создание через PATCH не поддержано.
-Это замена перечисленных редактируемых полей, не JSON Patch RFC 6902.
-Polygon/geofenceRadius пока локальные, в PATCH не отправляются.
+GET /objects и GET /objects/{id} возвращают serverVersion начиная с 1.
+GET /visits/{id} позволяет вручную обновить снимок конфликта.
+PATCH /objects/{id} принимает id, name, address, latitude, longitude, status,
+priority, serverVersion и обязательный заголовок Idempotency-Key — уникальную
+строку до 100 символов. Объект должен существовать; создание через PATCH не
+поддерживается. Это замена перечисленных полей, а не JSON Patch RFC 6902.
+Поля polygon/geofenceRadius локальные и не отправляются.
 
-Версия клиента 4 при серверной 5 даёт 409 Problem JSON с `current` (полный ObjectDto).
-Успех увеличивает версию на один. Check-in также увеличивает версию изменённого объекта.
-POST Visits никогда не перезаписывает существующий факт с другим payload.
+Версия клиента 4 при серверной 5 даёт 409 с current — полным ObjectDto.
+Успех увеличивает версию на один. Отметка о посещении также увеличивает версию
+изменённого объекта. POST посещений не перезаписывает существующий факт с другими данными.
 
-Успешный PATCH и OperationReceipt сохраняются одной EF/SQLite транзакцией. После
-потери ACK повтор с тем же ключом и request получает исходный response, даже если
-кто-то уже изменил объект снова. Другая нагрузка с тем же ключом даёт 409. Явное
-разрешение конфликта использует новую операцию/ключ и вновь проверяет версию.
-Receipts переживают перезапуск; автоматического TTL в pet-проекте нет.
+Успешный PATCH и OperationReceipt сохраняются одной транзакцией EF/SQLite.
+После потери подтверждения прежний ключ и запрос возвращают исходный ответ,
+даже после последующих изменений объекта. Другие данные с тем же ключом дают 409.
+Явное разрешение конфликта создаёт новую операцию и снова проверяет версию.
+Подтверждения переживают перезапуск; автоматического срока удаления пока нет.
 
 ```powershell
 $api = 'http://127.0.0.1:5080'
@@ -194,6 +201,6 @@ Invoke-WebRequest "$api/objects/$($o.id)" -Method Patch -ContentType application
   -Headers @{ 'Idempotency-Key'=[guid]::NewGuid().ToString('N') } -Body ($edit | ConvertTo-Json) -SkipHttpErrorCheck
 ```
 
-Скрипт `backend/scripts/Smoke-Test.ps1` проверяет PATCH, текущий snapshot, immutable
-Visits и повтор исходного PATCH после более новой записи. Используйте отдельную
-Storage:Path для этого теста: он намеренно изменяет seed-объекты.
+Smoke-Test.ps1 проверяет PATCH, актуальный снимок, неизменяемость посещений
+и повтор исходного PATCH после новой записи. Используйте отдельный Storage:Path:
+тест намеренно меняет начальные объекты.

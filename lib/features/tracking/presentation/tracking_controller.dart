@@ -31,8 +31,8 @@ final trackingControllerProvider = NotifierProvider<TrackingController, String>(
   TrackingController.new,
 );
 
-/// UI commands and inbox reconciliation only. There is NO Dart recording loop:
-/// lifecycle pause, widget disposal or engine destruction cannot stop the FGS.
+/// Только команды интерфейса и сверка входящей очереди. Цикла записи на Dart здесь НЕТ:
+/// приостановка приложения, удаление виджета или уничтожение движка не останавливают FGS.
 class TrackingController extends Notifier<String> {
   bool _command = false;
   bool _refreshing = false;
@@ -40,13 +40,13 @@ class TrackingController extends Notifier<String> {
   @override
   String build() {
     ref.onDispose(() => _timer?.cancel());
-    return 'Проверка Android tracking';
+    return 'Проверка записи маршрута';
   }
 
   void setForeground(bool active) {
     _timer?.cancel();
     if (!active) {
-      return; // Stops only UI reconciliation, never the native service.
+      return; // Останавливает только сверку интерфейса, но не платформенный сервис.
     }
     unawaited(refresh());
     _timer = Timer.periodic(
@@ -65,9 +65,11 @@ class TrackingController extends Notifier<String> {
       if (!ref.mounted) return;
       state = status.running
           ? status.message
-          : '${status.message}. Для записи нажмите «Возобновить tracking»';
+          : '${status.message}. Для записи нажмите «Возобновить запись маршрута»';
     } catch (error) {
-      if (ref.mounted) state = 'Не удалось получить tracking: $error';
+      if (ref.mounted) {
+        state = 'Не удалось получить состояние записи маршрута: $error';
+      }
     } finally {
       _refreshing = false;
     }
@@ -77,8 +79,8 @@ class TrackingController extends Notifier<String> {
     if (_command) return;
     _command = true;
     try {
-      // Request while Activity is visible. Kotlin repeats precise permission and
-      // visibility checks immediately before creating the Android foreground service.
+      // Запрашиваем при видимой Activity. Kotlin повторно проверяет точное разрешение и
+      // видимость непосредственно перед созданием активного сервиса Android.
       final location = ref.read(locationServiceProvider);
       if (!await location.isServiceEnabled()) {
         throw const TrackingFailure('Включите геолокацию');
@@ -99,9 +101,7 @@ class TrackingController extends Notifier<String> {
       final id = await ref.read(routeRepositoryProvider).start();
       await native.startTracking(id);
       if (ref.mounted) {
-        state = notifications
-            ? 'Маршрут отслеживается'
-            : 'Tracking активен; уведомления отключены в настройках Android';
+        state = notifications ? 'Маршрут отслеживается' : 'Запись маршрута активна; уведомления отключены в настройках Android';
       }
     } catch (error) {
       if (ref.mounted) state = '$error';
@@ -117,8 +117,8 @@ class TrackingController extends Notifier<String> {
     try {
       final repository = ref.read(routeRepositoryProvider);
       final importer = ref.read(nativeTrackImporterProvider);
-      // Stop ACK is a native write barrier. Repeat drain if an earlier UI drain
-      // was already in flight, to capture the final callback before stop.
+      // Подтверждение остановки — платформенный барьер записи. Повторяем импорт, если прежний
+      // ещё выполнялся: так захватываем последнюю запись перед остановкой.
       await ref.read(nativeTrackingProvider).stopTracking();
       await importer.drain();
       await importer.drain();
