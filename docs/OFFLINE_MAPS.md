@@ -43,7 +43,7 @@ Python 3, без дополнительных библиотек:
 ~~~powershell
 python tools/offline_maps/prepare_pack.py C:/maps/allowed-raster.mbtiles `
   --rights-confirmed `
-  --attribution "© участники OpenStreetMap; картография: ваш источник"
+  --attribution "© OpenStreetMap contributors"
 python -m http.server 8090 --bind 0.0.0.0 --directory tools/offline_maps/output
 ~~~
 

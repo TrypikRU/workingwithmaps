@@ -293,9 +293,7 @@ class _ObjectsMapState extends State<ObjectsMap> {
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: Text(
-                      widget.tileAttribution.isEmpty
-                          ? '© OpenStreetMap contributors'
-                          : '© OpenStreetMap contributors · ${widget.tileAttribution}',
+                      '© OpenStreetMap contributors',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 12,
