@@ -1,4 +1,4 @@
-# Полевой инспектор — тестовый API
+# Полевой инспектор - тестовый API
 
 Небольшой ASP.NET Core Web API (.NET 10) для проверки синхронизации мобильного
 приложения с поддержкой работы без интернета. EF Core хранит Objects, Routes,
@@ -39,7 +39,7 @@ dotnet run --project backend/FieldInspector.Api --launch-profile http -- --Stora
 
 ## Эмулятор Android
 
-Базовый адрес — http://10.0.2.2:5080/. Адрес 10.0.2.2 даёт доступ к локальному
+Базовый адрес - http://10.0.2.2:5080/. Адрес 10.0.2.2 даёт доступ к локальному
 интерфейсу компьютера из стандартного
 [Android Emulator](https://developer.android.com/studio/run/emulator-networking).
 На ПК используйте 127.0.0.1. Сервер слушает только локальный интерфейс.
@@ -61,7 +61,7 @@ GET /sync и загрузка обходов автоматически не в�
 ## Реальное устройство Android в локальной сети
 
 Компьютер и телефон должны находиться в одной локальной сети: например,
-телефон подключён к Wi-Fi, а компьютер — к тому же роутеру по Wi-Fi или кабелю.
+телефон подключён к Wi-Fi, а компьютер - к тому же роутеру по Wi-Fi или кабелю.
 Гостевая сеть и изоляция клиентов на роутере могут блокировать доступ к ПК.
 USB можно использовать для установки и отладки приложения; запросы к API
 в этой инструкции идут через локальную сеть.
@@ -82,7 +82,7 @@ dotnet run --project backend/FieldInspector.Api --launch-profile http -- --urls 
 
 Профиль сохраняет окружение Development, а `--urls` меняет привязку сервера
 с локального интерфейса на все IPv4-интерфейсы.
-`0.0.0.0` — адрес привязки сервера, а не адрес для приложения.
+`0.0.0.0` - адрес привязки сервера, а не адрес для приложения.
 Подробнее: [настройка адресов Kestrel](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/endpoints?view=aspnetcore-10.0).
 
 Если брандмауэр Windows блокирует подключение, разрешите входящие TCP-соединения
@@ -90,7 +90,7 @@ dotnet run --project backend/FieldInspector.Api --launch-profile http -- --urls 
 следующую команду в PowerShell от имени администратора:
 
 ```powershell
-New-NetFirewallRule -DisplayName "Полевой инспектор — локальный API" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5080 -Profile Private -RemoteAddress LocalSubnet
+New-NetFirewallRule -DisplayName "Полевой инспектор - локальный API" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5080 -Profile Private -RemoteAddress LocalSubnet
 ```
 
 Правило действует только для сетевого профиля «Частная» и источников
@@ -181,15 +181,15 @@ flutter run --debug -d <идентификатор-устройства> --dart-
 
 ## Контракты и ручная проверка
 
-JSON использует camelCase, перечисления — строки.
+JSON использует camelCase, перечисления - строки.
 Время передаётся в ISO 8601 с UTC или явным смещением.
 
 | Метод API | Ответ или назначение |
 | --- | --- |
 | GET /objects | Объекты: id, name, address, latitude, longitude, status, priority, updatedAt, serverVersion |
 | GET /routes/today | Обходы на день UTC: id, name, date, status, objectIds, updatedAt |
-| POST /routes | id, name, date; 201 — создание, 200 — идентичный повтор, 409 — тот же идентификатор с другими данными |
-| POST /visits | 201 — создание, 200 — идентичный повтор; другие данные дают 409; актуальные updatedAt и serverVersion |
+| POST /routes | id, name, date; 201 - создание, 200 - идентичный повтор, 409 - тот же идентификатор с другими данными |
+| POST /visits | 201 - создание, 200 - идентичный повтор; другие данные дают 409; актуальные updatedAt и serverVersion |
 | POST /location/batch | inserted, existing, accepted; от 1 до 500 точек, атомарно |
 | GET /sync?since=… | cursor, serverTime, objects, routes, visits, locationPoints |
 
@@ -278,12 +278,12 @@ pwsh -File backend/scripts/Smoke-Test.ps1 -BaseUrl http://127.0.0.1:5081
 конфликты версий, атомарность пакета, изменения и курсор, проверка данных,
 Swagger и четыре искусственных сбоя.
 
-- Program.cs — DI, SQLite, Swagger и запуск начального заполнения.
-- Data/ — четыре сущности EF, связи, индексы и начальные данные.
-- Contracts.cs — HTTP DTO отдельно от сущностей хранения.
-- ApiEndpoints.cs — методы API, проверка и транзакционная запись.
-- SyncGate.cs — согласованный курсор, упорядоченная запись и чтение снимка изменений.
-- DebugFaultMiddleware.cs — искусственные сбои запросов, отключённые вне Development.
+- Program.cs - DI, SQLite, Swagger и запуск начального заполнения.
+- Data/ - четыре сущности EF, связи, индексы и начальные данные.
+- Contracts.cs - HTTP DTO отдельно от сущностей хранения.
+- ApiEndpoints.cs - методы API, проверка и транзакционная запись.
+- SyncGate.cs - согласованный курсор, упорядоченная запись и чтение снимка изменений.
+- DebugFaultMiddleware.cs - искусственные сбои запросов, отключённые вне Development.
 
 API рассчитан на один локальный процесс. Не запускайте несколько экземпляров
 с одной SQLite и не меняйте её внешним редактором во время работы:
@@ -294,12 +294,12 @@ API рассчитан на один локальный процесс. Не з�
 GET /objects и GET /objects/{id} возвращают serverVersion начиная с 1.
 GET /visits/{id} позволяет вручную обновить снимок конфликта.
 PATCH /objects/{id} принимает id, name, address, latitude, longitude, status,
-priority, serverVersion и обязательный заголовок Idempotency-Key — уникальную
+priority, serverVersion и обязательный заголовок Idempotency-Key - уникальную
 строку до 100 символов. Объект должен существовать; создание через PATCH не
 поддерживается. Это замена перечисленных полей, а не JSON Patch RFC 6902.
 Поля polygon/geofenceRadius локальные и не отправляются.
 
-Версия клиента 4 при серверной 5 даёт 409 с current — полным ObjectDto.
+Версия клиента 4 при серверной 5 даёт 409 с current - полным ObjectDto.
 Успех увеличивает версию на один. Отметка о посещении также увеличивает версию
 изменённого объекта. POST посещений не перезаписывает существующий факт с другими данными.
 

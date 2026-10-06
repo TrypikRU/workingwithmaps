@@ -1,10 +1,10 @@
 # Слой геолокации
 
-LocationService — платформонезависимый контракт: состояние сервиса, проверка и
+LocationService - платформонезависимый контракт: состояние сервиса, проверка и
 запрос разрешения, текущая и последняя известная позиция, поток координат,
 события включения GPS, открытие системных настроек.
 
-GeolocatorLocationService — единственное место импорта geolocator. Он переводит
+GeolocatorLocationService - единственное место импорта geolocator. Он переводит
 Position, LocationPermission и исключения плагина в типы приложения. Источник
 можно заменить через locationServiceProvider.
 Запись обхода на Kotlin использует отдельный канал NativeTracking и сохранённую
@@ -14,7 +14,7 @@ LocationController (Riverpod Notifier) управляет состояниями
 permissionGranted, permissionDenied, permissionDeniedForever, serviceDisabled,
 available, error и paused. Автоматическая проверка не открывает диалог.
 Параметр requestPermission: true передаётся только по кнопке пользователя.
-При постоянном отказе предлагаются настройки приложения, при выключенном GPS —
+При постоянном отказе предлагаются настройки приложения, при выключенном GPS -
 настройки геолокации.
 
 Последняя известная позиция помечается isLastKnown, показывается серым и не

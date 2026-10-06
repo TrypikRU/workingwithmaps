@@ -8,11 +8,11 @@
 
 CircularGeofence(center: GeoPoint(...), radius: 50) использует Haversine:
 
-- inside — расстояние не больше radius;
-- approaching — больше radius, но не больше approachingRadius;
-- outside — больше approachingRadius.
+- inside - расстояние не больше radius;
+- approaching - больше radius, но не больше approachingRadius;
+- outside - больше approachingRadius.
 
-По умолчанию radius равен 50 м, approachingRadius — трём радиусам, то есть 150 м.
+По умолчанию radius равен 50 м, approachingRadius - трём радиусам, то есть 150 м.
 Можно задать оба порога. Некорректные координаты, нечисловые или отрицательные
 радиусы и approachingRadius < radius вызывают ArgumentError. Границы включаются
 в сравнение без округления расстояния до метров.
