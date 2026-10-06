@@ -249,7 +249,7 @@ JSON/PNG-пакет. Приложение проверяет полноту, ф�
 
 | Карта | Объект | Текущий обход | Синхронизация |
 | --- | --- | --- | --- |
-| ![Карта](docs/screenshots/map.png) | ![Технический объект](docs/screenshots/object.png) | ![Текущий обход](docs/screenshots/current-route.png) | ![Синхронизация](docs/screenshots/sync.png) |
+| <a href="docs/screenshots/map.png"><img src="docs/screenshots/map.png" alt="Карта" width="180"></a> | <a href="docs/screenshots/object.png"><img src="docs/screenshots/object.png" alt="Технический объект" width="180"></a> | <a href="docs/screenshots/current-route.png"><img src="docs/screenshots/current-route.png" alt="Текущий обход" width="180"></a> | <a href="docs/screenshots/sync.png"><img src="docs/screenshots/sync.png" alt="Синхронизация" width="180"></a> |
 | Объекты, точность GPS и маршрут | Статус, приоритет и условия отметки | Итоги завершённого обхода | Счётчики очереди и повтор ошибок |
 
 [Описание снимков экранов](docs/screenshots/README.md).
