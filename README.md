@@ -1,5 +1,7 @@
 # Полевой инспектор
 
+[Оглавление документации](docs/README.md) — ссылки на все документы проекта с краткими описаниями.
+
 [![CI](https://github.com/TrypikRU/workingwithmaps/actions/workflows/ci.yml/badge.svg)](https://github.com/TrypikRU/workingwithmaps/actions/workflows/ci.yml)
 
 Android-приложение на Flutter для выездного сотрудника: найти технический объект,
