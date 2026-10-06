@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/widgets/scroll_to_top_area.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/sync_status.dart';
@@ -30,155 +33,159 @@ class SyncScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Диагностика синхронизации')),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.all(20),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Последняя успешная синхронизация',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      data == null
-                          ? 'Загрузка…'
-                          : data.lastSuccessAt == null
-                          ? 'Пока не было'
-                          : formatSyncTime(data.lastSuccessAt!),
-                    ),
-                    const Text(
-                      'Время последнего подтверждения сервером · время устройства',
-                    ),
-                    const SizedBox(height: 16),
-                    if (data != null)
+        child: ScrollToTopArea(
+          builder: (scrollController) => CustomScrollView(
+            controller: scrollController,
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Последняя успешная синхронизация',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        data == null
+                            ? 'Загрузка…'
+                            : data.lastSuccessAt == null
+                            ? 'Пока не было'
+                            : formatSyncTime(data.lastSuccessAt!),
+                      ),
+                      const Text(
+                        'Время последнего подтверждения сервером · время устройства',
+                      ),
+                      const SizedBox(height: 16),
+                      if (data != null)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _StatusCount(
+                              label: 'Синхронизировано',
+                              count: data.synced,
+                              icon: Icons.cloud_done_outlined,
+                            ),
+                            _StatusCount(
+                              label: 'Ожидает отправки',
+                              count: data.count(SyncStatus.pending),
+                              icon: Icons.schedule,
+                            ),
+                            _StatusCount(
+                              label: 'Отправляется',
+                              count: data.count(SyncStatus.syncing),
+                              icon: Icons.sync,
+                            ),
+                            _StatusCount(
+                              label: 'Ошибки',
+                              count: data.count(SyncStatus.failed),
+                              icon: Icons.error_outline,
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '«Синхронизировано» — всего подтверждённых операций с включения диагностики. Остальные счётчики — текущая очередь.',
+                      ),
+                      if (busy)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Column(
+                            children: [
+                              LinearProgressIndicator(),
+                              SizedBox(height: 6),
+                              Text('Синхронизация выполняется…'),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 16),
                       Wrap(
-                        spacing: 8,
+                        spacing: 12,
                         runSpacing: 8,
                         children: [
-                          _StatusCount(
-                            label: 'Синхронизировано',
-                            count: data.synced,
-                            icon: Icons.cloud_done_outlined,
+                          FilledButton.icon(
+                            onPressed: busy
+                                ? null
+                                : () async {
+                                    await synchronize();
+                                  },
+                            icon: const Icon(Icons.sync),
+                            label: const Text('Синхронизировать сейчас'),
                           ),
-                          _StatusCount(
-                            label: 'Ожидает отправки',
-                            count: data.count(SyncStatus.pending),
-                            icon: Icons.schedule,
-                          ),
-                          _StatusCount(
-                            label: 'Отправляется',
-                            count: data.count(SyncStatus.syncing),
-                            icon: Icons.sync,
-                          ),
-                          _StatusCount(
-                            label: 'Ошибки',
-                            count: data.count(SyncStatus.failed),
-                            icon: Icons.error_outline,
+                          OutlinedButton.icon(
+                            onPressed:
+                                busy ||
+                                    data == null ||
+                                    data.count(SyncStatus.failed) == 0
+                                ? null
+                                : () async {
+                                    await synchronize(retryFailed: true);
+                                  },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Повторить ошибочные'),
                           ),
                         ],
                       ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '«Синхронизировано» — всего подтверждённых операций с включения диагностики. Остальные счётчики — текущая очередь.',
-                    ),
-                    if (busy)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Column(
-                          children: [
-                            LinearProgressIndicator(),
-                            SizedBox(height: 6),
-                            Text('Синхронизация выполняется…'),
-                          ],
-                        ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Обычный запуск учитывает время следующей попытки. Повтор ошибочных снимает задержку, но не разрешает конфликт автоматически. Ошибки сохраняются до успешного подтверждения.',
                       ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.icon(
-                          onPressed: busy
-                              ? null
-                              : () async {
-                                  await synchronize();
-                                },
-                          icon: const Icon(Icons.sync),
-                          label: const Text('Синхронизировать сейчас'),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed:
-                              busy ||
-                                  data == null ||
-                                  data.count(SyncStatus.failed) == 0
-                              ? null
-                              : () async {
-                                  await synchronize(retryFailed: true);
-                                },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Повторить ошибочные'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Обычный запуск учитывает время следующей попытки. Повтор ошибочных снимает задержку, но не разрешает конфликт автоматически. Ошибки сохраняются до успешного подтверждения.',
-                    ),
-                    const SizedBox(height: 24),
-                    const SyncConflictsPanel(),
-                    Text(
-                      'Операции в очереди',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const Text(
-                      'Порядок создания · новые операции появляются автоматически',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            ...diagnostics.when(
-              loading: () => [
-                const SliverToBoxAdapter(
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ],
-              error: (_, _) => [
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text(
-                      'Не удалось прочитать диагностику. Проверьте локальную БД.',
-                    ),
-                  ),
-                ),
-              ],
-              data: (state) => state.operations.isEmpty
-                  ? [
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text('Очередь пуста'),
-                        ),
+                      const SizedBox(height: 24),
+                      const SyncConflictsPanel(),
+                      Text(
+                        'Операции в очереди',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                    ]
-                  : [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                        sliver: SliverList.builder(
-                          itemCount: state.operations.length,
-                          itemBuilder: (context, index) => _OperationCard(
-                            operation: state.operations[index],
-                          ),
-                        ),
+                      const Text(
+                        'Порядок создания · новые операции появляются автоматически',
                       ),
                     ],
-            ),
-          ],
+                  ),
+                ),
+              ),
+              ...diagnostics.when(
+                loading: () => [
+                  const SliverToBoxAdapter(
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ],
+                error: (_, _) => [
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'Не удалось прочитать диагностику. Проверьте локальную БД.',
+                      ),
+                    ),
+                  ),
+                ],
+                data: (state) => state.operations.isEmpty
+                    ? [
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text('Очередь пуста'),
+                          ),
+                        ),
+                      ]
+                    : [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          sliver: SliverList.builder(
+                            itemCount: state.operations.length,
+                            itemBuilder: (context, index) => _OperationCard(
+                              operation: state.operations[index],
+                            ),
+                          ),
+                        ),
+                      ],
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            ],
+          ),
         ),
       ),
     );
