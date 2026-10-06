@@ -53,6 +53,7 @@ app.*.map.json
 /backend/**/obj/
 /backend/**/Data/*.sqlite*
 
-# Локально подготовленные пакеты офлайн-карт
-/tools/offline_maps/output/
+# Временные результаты подготовки; готовый пакет карты можно хранить в Git.
+/tools/offline_maps/output/*
+!/tools/offline_maps/output/field-region.json
 /tools/offline_maps/__pycache__/
